@@ -38,23 +38,24 @@ def get_conn():
 S = dict(
     stat_date='"统计日期"', prod_id='"商品ID"', prod_name='"商品名称"',
     pay_amt='"支付金额"', pay_items='"支付件数"', pay_buyers='"支付买家数"',
-    refund_amt='"成功退款金额"',
-)
-# RealDictCursor 返回的列名不带双引号，但 SQL 中需要双引号保留大小写
-S_KEY = dict(
-    stat_date='统计日期', prod_id='商品ID', prod_name='商品名称',
-    pay_amt='支付金额', pay_items='支付件数', pay_buyers='支付买家数',
-    refund_amt='成功退款金额',
+    refund_amt='"成功退款金额"', visitor='"商品访客数"',
+    cart_users='"商品加购人数"', cart_items='"商品加购件数"',
 )
 W = dict(
-    date='"日期"', channel='"计划名字"', keyword='"主体名称"',
+    date='"日期"', scene='"场景名字"', channel='"计划名字"', keyword='"主体名称"',
     impressions='"展现量"', clicks='"点击量"', cost='"花费"',
     content_type='"主体类型"',
 )
 W_KEY = dict(
-    date='日期', channel='计划名字', keyword='主体名称',
+    date='日期', scene='场景名字', channel='计划名字', keyword='主体名称',
     impressions='展现量', clicks='点击量', cost='花费',
     content_type='主体类型',
+)
+S_KEY = dict(
+    stat_date='统计日期', prod_id='商品ID', prod_name='商品名称',
+    pay_amt='支付金额', pay_items='支付件数', pay_buyers='支付买家数',
+    refund_amt='成功退款金额', visitor='商品访客数',
+    cart_users='商品加购人数', cart_items='商品加购件数',
 )
 
 # ── 页面入口 ──
@@ -62,7 +63,73 @@ W_KEY = dict(
 def index():
     return render_template('bi-dashboard.html')
 
-# ── API: KPI ──
+# ── API: 店铺数据概况 ──
+@app.route('/api/shop_overview')
+def api_shop_overview():
+    """店铺维度核心指标汇总（近7日）"""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # 生意参谋 — 成交与流量指标
+    cur.execute(f"""
+        SELECT
+            COALESCE(SUM({S['pay_amt']}), 0) AS pay_amount,
+            COALESCE(SUM({S['refund_amt']}), 0) AS refund_amount,
+            COALESCE(SUM({S['visitor']}), 0) AS visitors,
+            COALESCE(SUM({S['pay_buyers']}), 0) AS pay_buyers,
+            COALESCE(SUM({S['cart_users']}), 0) AS cart_users,
+            COALESCE(SUM({S['cart_items']}), 0) AS cart_items
+        FROM sycm_sp_all
+        WHERE {S['stat_date']} >= CURRENT_DATE - INTERVAL '7 days'
+    """)
+    s = cur.fetchone()
+
+    # 无界 — 推广花费（按场景分类）
+    cur.execute(f"""
+        SELECT
+            COALESCE(SUM({W['cost']}), 0) AS total_cost,
+            COALESCE(SUM(CASE WHEN {W['scene']} = '关键词推广' THEN {W['cost']} ELSE 0 END), 0) AS keyword_cost,
+            COALESCE(SUM(CASE WHEN {W['scene']} = '人群推广' THEN {W['cost']} ELSE 0 END), 0) AS audience_cost,
+            COALESCE(SUM(CASE WHEN {W['scene']} = '货品全站推广' THEN {W['cost']} ELSE 0 END), 0) AS "全站推广成本",
+            COALESCE(SUM(CASE WHEN {W['scene']} = '超级短视频' THEN {W['cost']} ELSE 0 END), 0) AS video_cost,
+            COALESCE(SUM(CASE WHEN {W['scene']} = '店铺直达' THEN {W['cost']} ELSE 0 END), 0) AS direct_cost
+        FROM wj_jhbb_jh
+        WHERE {W['date']} >= CURRENT_DATE - INTERVAL '7 days'
+    """)
+    w = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    pay_amt = float(s['pay_amount'])
+    refund_amt = float(s['refund_amount'])
+    net_amt = pay_amt - refund_amt
+    total_cost = float(w['total_cost'])
+
+    return jsonify({
+        # 成交指标
+        "pay_amount": round(pay_amt, 2),
+        "refund_amount": round(refund_amt, 2),
+        "net_amount": round(net_amt, 2),
+        # 流量指标
+        "visitors": int(s['visitors']),
+        "pay_buyers": int(s['pay_buyers']),
+        "cart_users": int(s['cart_users']),
+        "cart_items": int(s['cart_items']),
+        # 推广花费
+        "total_cost": round(total_cost, 2),
+        "keyword_cost": round(float(w['keyword_cost']), 2),
+        "audience_cost": round(float(w['audience_cost']), 2),
+        "全站推广成本": round(float(w['全站推广成本']), 2),
+        # 衍生指标
+        "net_profit": round(net_amt - total_cost, 2),
+        "cost_ratio": round(total_cost / pay_amt * 100, 1) if pay_amt > 0 else 0,
+        "roi": round(pay_amt / total_cost, 2) if total_cost > 0 else 0,
+        "avg_order_value": round(pay_amt / int(s['pay_buyers']), 2) if int(s['pay_buyers']) > 0 else 0,
+        "cart_rate": round(int(s['cart_users']) / int(s['visitors']) * 100, 2) if int(s['visitors']) > 0 else 0,
+        "pay_rate": round(int(s['pay_buyers']) / int(s['visitors']) * 100, 2) if int(s['visitors']) > 0 else 0,
+    })
+
+# ── API: KPI（旧版，保留兼容） ──
 @app.route('/api/kpi')
 def api_kpi():
     conn = get_conn()
@@ -254,6 +321,34 @@ def api_reports():
         result[name] = int(cur.fetchone()[0])
     cur.close(); conn.close()
     return jsonify(result)
+
+# ── API: 完整日报 ──
+@app.route('/api/daily_report')
+def api_daily_report():
+    from flask import current_app
+    with current_app.test_client() as client:
+        overview = client.get('/api/shop_overview').get_json()
+        kpi = client.get('/api/kpi').get_json()
+        trend = client.get('/api/trend').get_json()
+        top5 = client.get('/api/product_top').get_json()
+        competitor = client.get('/api/competitor').get_json()
+        comp_sales = client.get('/api/competitor_sales').get_json()
+        traffic = client.get('/api/traffic').get_json()
+        keywords = client.get('/api/keywords').get_json()
+        reports = client.get('/api/reports').get_json()
+
+    return jsonify({
+        "overview": overview,
+        "kpi": kpi,
+        "trend": trend,
+        "product_top": top5,
+        "competitor": competitor,
+        "competitor_sales": comp_sales,
+        "traffic": traffic,
+        "keywords": keywords,
+        "reports": reports,
+        "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    })
 
 # ── 启动 ──
 if __name__ == '__main__':

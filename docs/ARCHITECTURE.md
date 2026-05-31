@@ -27,8 +27,8 @@
 │  ┌────────────────────────┼──────────────────────────┐    │
 │  │              bi_dashboard_server.py                 │    │
 │  │  ┌─────────────────────┼────────────────────────┐  │    │
-│  │  │              API 路由层 (9个端点)               │  │    │
-│  │  │  /api/kpi  /api/trend  /api/product_top      │  │    │
+│  │  │              API 路由层 (10个端点)               │  │    │
+│  │  │  /api/kpi  /api/shop_overview  /api/trend  /api/product_top      │  │    │
 │  │  │  /api/competitor  /api/traffic  /api/keywords│  │    │
 │  │  │  /api/reports  /api/daily_report             │  │    │
 │  │  └─────────────────────┬────────────────────────┘  │    │

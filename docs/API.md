@@ -27,7 +27,35 @@
 
 ---
 
-### 2. 日销售额趋势
+### 2. 店铺数据概况
+
+**GET** `/api/shop_overview`
+
+店铺维度核心指标汇总（近7日），含衍生指标。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `pay_amount` | number | 成交金额（支付金额） |
+| `refund_amount` | number | 退款成功金额 |
+| `net_amount` | number | 净成交金额 = 成交 − 退款 |
+| `visitors` | number | 访客数（商品访客数） |
+| `pay_buyers` | number | 支付买家数 |
+| `cart_users` | number | 加购人数 |
+| `cart_items` | number | 加购件数 |
+| `total_cost` | number | 总花费金额（所有推广场景合计） |
+| `keyword_cost` | number | 关键词推广花费 |
+| `audience_cost` | number | 人群推广花费 |
+| `全站推广成本` | number | 全站推广花费（货品全站推广） |
+| `net_profit` | number | 净利润 = 净成交 − 总花费 |
+| `cost_ratio` | number | 花费占比 % = 总花费 / 成交金额 |
+| `roi` | number | ROI = 成交金额 / 总花费 |
+| `avg_order_value` | number | 客单价 = 成交金额 / 支付买家数 |
+| `cart_rate` | number | 加购率 % = 加购人数 / 访客数 |
+| `pay_rate` | number | 支付转化率 % = 支付买家数 / 访客数 |
+
+---
+
+### 3. 日销售额趋势
 
 **GET** `/api/trend`
 
@@ -41,7 +69,7 @@
 
 ---
 
-### 3. 商品支付TOP5
+### 4. 商品支付TOP5
 
 **GET** `/api/product_top`
 
@@ -57,7 +85,7 @@
 
 ---
 
-### 4. 竞品监控
+### 5. 竞品监控
 
 **GET** `/api/competitor`
 
@@ -77,7 +105,7 @@
 
 ---
 
-### 5. 竞品SKU预估销售额
+### 6. 竞品SKU预估销售额
 
 **GET** `/api/competitor_sales`
 
@@ -90,7 +118,7 @@
 
 ---
 
-### 6. 流量来源分布
+### 7. 流量来源分布
 
 **GET** `/api/traffic`
 
@@ -105,7 +133,7 @@
 
 ---
 
-### 7. 关键词上升TOP10
+### 8. 关键词上升TOP10
 
 **GET** `/api/keywords`
 
@@ -119,7 +147,7 @@
 
 ---
 
-### 8. 无界报表概览
+### 9. 无界报表概览
 
 **GET** `/api/reports`
 
@@ -137,7 +165,7 @@
 
 ---
 
-### 9. 完整日报
+### 10. 完整日报
 
 **GET** `/api/daily_report`
 

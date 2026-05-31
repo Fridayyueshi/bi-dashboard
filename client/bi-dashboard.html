@@ -173,6 +173,20 @@
     }
 
     /* ── 通用卡片 ── */
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 20px 0 16px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border);
@@ -397,34 +411,123 @@
 
 <div class="container">
 
-  <!-- ═══ KPI 卡片 ═══ -->
-  <div class="kpi-row" id="kpiRow">
+  <!-- ═══ 店铺数据概况 ═══ -->
+  <div class="section-title">📊 店铺数据概况</div>
+
+  <!-- 成交与流量（4列） -->
+  <div class="kpi-row" id="shopOverviewRow">
     <div class="kpi-card">
       <div class="kpi-icon" style="background:rgba(59,130,246,0.15)">💰</div>
-      <div class="kpi-label">支付金额（7日）</div>
-      <div class="kpi-value" id="kpiAmount">¥0</div>
-      <div class="kpi-trend" id="kpiAmountTrend"></div>
-    </div>
-
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:rgba(16,185,129,0.15)">📦</div>
-      <div class="kpi-label">支付件数</div>
-      <div class="kpi-value" id="kpiItems">0</div>
-      <div class="kpi-trend" id="kpiItemsTrend"></div>
-    </div>
-
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:rgba(245,158,11,0.15)">👤</div>
-      <div class="kpi-label">支付买家数</div>
-      <div class="kpi-value" id="kpiBuyers">0</div>
-      <div class="kpi-trend trend-flat">— 实时</div>
+      <div class="kpi-label">成交金额</div>
+      <div class="kpi-value" id="soPayAmount">¥0</div>
+      <div class="kpi-sub">近7日支付总额</div>
     </div>
 
     <div class="kpi-card">
       <div class="kpi-icon" style="background:rgba(239,68,68,0.15)">📉</div>
       <div class="kpi-label">退款金额</div>
-      <div class="kpi-value" id="kpiRefund">¥0</div>
-      <div class="kpi-trend trend-down">—</div>
+      <div class="kpi-value" id="soRefundAmount">¥0</div>
+      <div class="kpi-sub">成功退款金额</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(16,185,129,0.15)">✅</div>
+      <div class="kpi-label">净成交金额</div>
+      <div class="kpi-value" id="soNetAmount">¥0</div>
+      <div class="kpi-sub">成交 − 退款</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(245,158,11,0.15)">👁</div>
+      <div class="kpi-label">访客数</div>
+      <div class="kpi-value" id="soVisitors">0</div>
+      <div class="kpi-sub">商品访客数</div>
+    </div>
+  </div>
+
+  <!-- 运营指标（4列） -->
+  <div class="kpi-row" id="shopOpsRow">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(245,158,11,0.15)">👤</div>
+      <div class="kpi-label">支付买家数</div>
+      <div class="kpi-value" id="soBuyers">0</div>
+      <div class="kpi-sub">下单并支付</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(139,92,246,0.15)">🛒</div>
+      <div class="kpi-label">加购人数</div>
+      <div class="kpi-value" id="soCartUsers">0</div>
+      <div class="kpi-sub">加入购物车</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(139,92,246,0.15)">📦</div>
+      <div class="kpi-label">加购件数</div>
+      <div class="kpi-value" id="soCartItems">0</div>
+      <div class="kpi-sub">加购商品总数</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(239,68,68,0.15)">💸</div>
+      <div class="kpi-label">总花费金额</div>
+      <div class="kpi-value" id="soTotalCost">¥0</div>
+      <div class="kpi-sub">推广总投入</div>
+    </div>
+  </div>
+
+  <!-- 推广花费细分（3列） -->
+  <div class="kpi-row" id="shopAdRow" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(59,130,246,0.15)">🔍</div>
+      <div class="kpi-label">关键词推广花费</div>
+      <div class="kpi-value" id="soKeywordCost">¥0</div>
+      <div class="kpi-sub">搜索推广</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(16,185,129,0.15)">👥</div>
+      <div class="kpi-label">人群推广花费</div>
+      <div class="kpi-value" id="soAudienceCost">¥0</div>
+      <div class="kpi-sub">人群定向推广</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(245,158,11,0.15)">🌐</div>
+      <div class="kpi-label">全站推广花费</div>
+      <div class="kpi-value" id="so全站Cost">¥0</div>
+      <div class="kpi-sub">货品全站推广</div>
+    </div>
+  </div>
+
+  <!-- 衍生指标（4列） -->
+  <div class="kpi-row" id="shopDerivedRow">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(16,185,129,0.15)">💵</div>
+      <div class="kpi-label">净利润</div>
+      <div class="kpi-value" id="soNetProfit">¥0</div>
+      <div class="kpi-sub">净成交 − 总花费</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(59,130,246,0.15)">📊</div>
+      <div class="kpi-label">花费占比</div>
+      <div class="kpi-value" id="soCostRatio">0%</div>
+      <div class="kpi-sub">花费 / 成交金额</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(245,158,11,0.15)">📈</div>
+      <div class="kpi-label">ROI</div>
+      <div class="kpi-value" id="soRoi">0</div>
+      <div class="kpi-sub">成交 / 花费</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(139,92,246,0.15)">🎯</div>
+      <div class="kpi-label">加购率</div>
+      <div class="kpi-value" id="soCartRate">0%</div>
+      <div class="kpi-sub">加购人数 / 访客数</div>
     </div>
   </div>
 
@@ -533,7 +636,40 @@ function trendText(pct) {
   return '— 持平 较上周';
 }
 
-// ── 加载 KPI ──
+// ── 加载店铺数据概况 ──
+async function loadShopOverview() {
+  try {
+    const res = await fetch('/api/shop_overview');
+    const d = await res.json();
+
+    // 成交与流量
+    document.getElementById('soPayAmount').textContent = fmtMoney(d.pay_amount);
+    document.getElementById('soRefundAmount').textContent = fmtMoney(d.refund_amount);
+    document.getElementById('soNetAmount').textContent = fmtMoney(d.net_amount);
+    document.getElementById('soVisitors').textContent = fmt(d.visitors);
+
+    // 运营指标
+    document.getElementById('soBuyers').textContent = fmt(d.pay_buyers);
+    document.getElementById('soCartUsers').textContent = fmt(d.cart_users);
+    document.getElementById('soCartItems').textContent = fmt(d.cart_items);
+    document.getElementById('soTotalCost').textContent = fmtMoney(d.total_cost);
+
+    // 推广花费细分
+    document.getElementById('soKeywordCost').textContent = fmtMoney(d.keyword_cost);
+    document.getElementById('soAudienceCost').textContent = fmtMoney(d.audience_cost);
+    document.getElementById('so全站Cost').textContent = fmtMoney(d.全站推广成本);
+
+    // 衍生指标
+    document.getElementById('soNetProfit').textContent = fmtMoney(d.net_profit);
+    document.getElementById('soCostRatio').textContent = d.cost_ratio + '%';
+    document.getElementById('soRoi').textContent = d.roi.toFixed(2);
+    document.getElementById('soCartRate').textContent = d.cart_rate + '%';
+  } catch(e) {
+    console.error('店铺概况加载失败:', e);
+  }
+}
+
+// ── 加载 KPI（旧版兼容） ──
 async function loadKPI() {
   try {
     const res = await fetch('/api/kpi');
@@ -749,6 +885,7 @@ async function loadAll() {
   document.getElementById('dateRange').textContent = `${lastWeek.toISOString().slice(0,10)} ~ ${today.toISOString().slice(0,10)}`;
 
   await Promise.all([
+    loadShopOverview(),
     loadKPI(),
     loadTrend(),
     loadCompetitor(),
