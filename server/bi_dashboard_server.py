@@ -195,26 +195,6 @@ def api_competitor_sales():
                    "est_sales": round(float(r['est']), 2)} for r in rows[:5]]
     })
 
-# ── API: 评价情感分析 ──
-@app.route('/api/sentiment')
-def api_sentiment():
-    conn = get_conn()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("""
-        SELECT sentiment, COUNT(*) AS cnt FROM competitor_reviews
-        WHERE item_id = %s GROUP BY sentiment
-    """, (663174705065,))
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    total = sum(r['cnt'] for r in rows)
-    return jsonify({
-        "total": total,
-        "good": next((r['cnt'] for r in rows if r['sentiment'] == '好评'), 0),
-        "neutral": next((r['cnt'] for r in rows if r['sentiment'] == '中评'), 0),
-        "bad": next((r['cnt'] for r in rows if r['sentiment'] == '差评'), 0),
-        "good_rate": round(next((r['cnt'] for r in rows if r['sentiment'] == '好评'), 0) / total * 100, 1) if total > 0 else 0,
-    })
-
 # ── API: 流量来源 ──
 @app.route('/api/traffic')
 def api_traffic():

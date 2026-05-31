@@ -36,7 +36,7 @@ python bi_dashboard_server.py
 | 流量来源 | `wj_jhbb_jh` | 无界计划报表 |
 | 关键词上升 | `wj_nrbb_nrandjh` | 无界内容报表 |
 | 报表概览 | 7张无界报表 | 商品/单元/地域/计划/内容/人群/营销场景 |
-| 竞品监控 | `competitor_*` | 竞品 SKU/评价/情感（可选） |
+| 竞品监控 | `competitor_*` | 竞品 SKU/评价（可选） |
 
 ## 🔧 配置
 

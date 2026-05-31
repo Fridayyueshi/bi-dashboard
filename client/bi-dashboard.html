@@ -306,78 +306,6 @@
       transition: width 0.5s ease-out;
     }
 
-    /* ── 情感分析饼图 ── */
-    .sentiment-ring {
-      display: flex;
-      align-items: center;
-      gap: 30px;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .ring-container {
-      position: relative;
-      width: 140px;
-      height: 140px;
-    }
-
-    .ring {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      transition: background 0.5s;
-    }
-
-    .ring-inner {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      width: 110px;
-      height: 110px;
-      background: var(--bg-card);
-      border-radius: 50%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .ring-inner .big {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--accent-green);
-    }
-
-    .ring-inner .small {
-      font-size: 11px;
-      color: var(--text-secondary);
-    }
-
-    .sentiment-legend {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-    }
-
-    .legend-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-    }
-
-    .legend-count {
-      color: var(--text-muted);
-      font-size: 12px;
-      margin-left: auto;
-    }
-
     /* ── 标签 ── */
     .tag {
       display: inline-block;
@@ -527,7 +455,7 @@
     </div>
   </div>
 
-  <!-- ═══ 商品排行 + 情感分析 + 流量来源 ═══ -->
+  <!-- ═══ 商品排行 + 流量来源 ═══ -->
   <div class="grid-3">
     <!-- 商品排行 -->
     <div class="card">
@@ -536,29 +464,6 @@
       </div>
       <div class="card-body" id="productTopTable">
         <div class="loading"><div class="spinner"></div>加载中...</div>
-      </div>
-    </div>
-
-    <!-- 评价情感分析 -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">评价情感分析</div>
-        <span class="tag tag-good" id="sentimentTag">共0条</span>
-      </div>
-      <div class="card-body">
-        <div class="sentiment-ring">
-          <div class="ring-container">
-            <div class="ring" id="sentimentRing"></div>
-            <div class="ring-inner">
-              <div class="big" id="sentimentRate">0%</div>
-              <div class="small">好评率</div>
-            </div>
-          </div>
-          <div class="sentiment-legend" id="sentimentLegend"></div>
-        </div>
-        <div style="margin-top:16px;text-align:center;font-size:12px;color:var(--text-muted)">
-          数据来自竞品晨物家居-餐桌椅 | 情感分类基于关键词+否定词处理
-        </div>
       </div>
     </div>
 
@@ -601,7 +506,7 @@
 </div>
 
 <div class="footer">
-  🏪 南巢店铺 BI 看板 | <span id="footerTime"></span> | 数据来源: 生意参谋 + 无界 + 竞品监控
+  🏪 南巢店铺 BI 看板 | <span id="footerTime"></span> | 数据来源: 生意参谋 + 无界
 </div>
 
 <script>
@@ -735,45 +640,6 @@ async function loadProductTop() {
   }
 }
 
-// ── 加载情感分析 ──
-async function loadSentiment() {
-  try {
-    const res = await fetch('/api/sentiment');
-    const d = await res.json();
-    const total = d.total || 1;
-
-    document.getElementById('sentimentTag').textContent = `共${d.total}条`;
-    document.getElementById('sentimentRate').textContent = d.good_rate + '%';
-
-    const goodDeg = d.good / total * 360;
-    const neuDeg = d.neutral / total * 360;
-    const badDeg = d.bad / total * 360;
-
-    document.getElementById('sentimentRing').style.background =
-      `conic-gradient(var(--accent-green) 0deg ${goodDeg}deg, var(--accent-orange) ${goodDeg}deg ${goodDeg+neuDeg}deg, var(--accent-red) ${goodDeg+neuDeg}deg 360deg)`;
-
-    document.getElementById('sentimentLegend').innerHTML = `
-      <div class="legend-item">
-        <span class="legend-dot" style="background:var(--accent-green)"></span>
-        <span>好评</span>
-        <span class="legend-count">${d.good}条</span>
-      </div>
-      <div class="legend-item">
-        <span class="legend-dot" style="background:var(--accent-orange)"></span>
-        <span>中评</span>
-        <span class="legend-count">${d.neutral}条</span>
-      </div>
-      <div class="legend-item">
-        <span class="legend-dot" style="background:var(--accent-red)"></span>
-        <span>差评</span>
-        <span class="legend-count">${d.bad}条</span>
-      </div>
-    `;
-  } catch(e) {
-    console.error('情感分析加载失败:', e);
-  }
-}
-
 // ── 加载流量来源 ──
 async function loadTraffic() {
   try {
@@ -887,7 +753,6 @@ async function loadAll() {
     loadTrend(),
     loadCompetitor(),
     loadProductTop(),
-    loadSentiment(),
     loadTraffic(),
     loadKeywords(),
     loadReports(),
