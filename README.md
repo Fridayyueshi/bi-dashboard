@@ -2,19 +2,23 @@
 
 > 天猫店铺"南巢"（黑胡桃木/真皮床）的数据可视化看板，长期开发项目。
 
+📋 **项目架构设计**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — 完整模块划分、依赖关系、开发优先级
+
+📖 **API 接口文档**: [docs/API.md](docs/API.md)
+
 ## 📦 项目结构
 
 ```
 nanchao-bi-dashboard/
-├── server/              # 后端服务
-│   ├── bi_dashboard_server.py   # Flask API + 页面入口
-│   ├── requirements.txt         # Python 依赖
-│   └── config.example.env       # 环境变量示例
-├── client/              # 前端页面
-│   └── bi-dashboard.html        # 单文件 SPA（深色主题卡片式布局）
-├── docs/                # 文档
-│   └── API.md                   # API 接口文档
-├── scripts/             # 辅助脚本
+├── server/                    # 后端服务
+│   ├── bi_dashboard_server.py # Flask API + 页面入口
+│   └── requirements.txt       # Python 依赖
+├── client/                    # 前端页面
+│   └── bi-dashboard.html      # 单文件 SPA（深色卡片式布局）
+├── docs/                      # 文档
+│   ├── ARCHITECTURE.md        # 项目架构设计（模块划分+依赖+优先级）
+│   └── API.md                 # API 接口文档
+├── scripts/                   # 辅助脚本
 ├── README.md
 └── .gitignore
 ```
@@ -48,12 +52,13 @@ export DB_USER=postgres
 export DB_PASSWORD=a123456
 ```
 
-## 📅 开发计划
+## 📅 开发阶段
 
-- [ ] 竞品每日监控 cron 任务（待创建）
-- [ ] 竞品SKU预估销售额板块
-- [ ] 竞品情感分析趋势图
-- [ ] 无界报表数据深度分析
-- [ ] 多店铺支持
-- [ ] 数据导出（CSV/PDF）
-- [ ] 移动端适配优化
+| 阶段 | 模块 | 状态 |
+|------|------|------|
+| **Phase 1** — 核心看板 | M1~M6 | ✅ 已完成 |
+| **Phase 2** — 竞品监控 | M7 + M11 | ⏳ 待开发 |
+| **Phase 3** — 数据导出 | M8 + M9 | ⏳ 待开发 |
+| **Phase 4** — 多店铺 | M10 | ⏳ 待开发 |
+
+详见: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
