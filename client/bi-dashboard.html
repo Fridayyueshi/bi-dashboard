@@ -141,6 +141,13 @@
       font-size: 12px;
     }
 
+    .chart-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      justify-content: center;
+    }
+
     .trend-up { color: var(--accent-green); }
     .trend-down { color: var(--accent-red); }
     .trend-flat { color: var(--text-muted); }
@@ -231,31 +238,81 @@
     .bar-chart {
       display: flex;
       align-items: flex-end;
-      justify-content: space-around;
+      justify-content: flex-start;
+      gap: 3px;
       height: 240px;
       padding: 20px 10px 0;
       border-bottom: 1px solid var(--border);
+      overflow-x: hidden;
+      position: relative;
     }
 
     .bar-group {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      cursor: pointer;
     }
 
     .bar {
-      width: 36px;
+      width: 100%;
+      max-width: 22px;
       border-radius: 4px 4px 0 0;
       background: linear-gradient(180deg, var(--accent-blue) 0%, #1d4ed8 100%);
-      transition: height 0.5s ease-out;
+      transition: height 0.5s ease-out, opacity 0.2s;
       min-height: 2px;
     }
 
+    .bar-group:hover .bar {
+      opacity: 0.7;
+    }
+
     .bar-label {
-      font-size: 11px;
+      font-size: 9px;
       color: var(--text-muted);
-      margin-top: 4px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      height: 30px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .bar-tooltip {
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .bar-tooltip::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 5px solid var(--border);
+    }
+
+    .bar-group:hover .bar-tooltip {
+      opacity: 1;
     }
 
     /* 双柱并排 */
@@ -436,7 +493,7 @@
       <select id="timeRange" onchange="changeTimeRange(this.value)" style="margin-left:8px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:12px;cursor:pointer">
         <option value="yesterday">昨天</option>
         <option value="7" selected>近7天</option>
-        <option value="14">近14天</option>
+        <option value="15">近15天</option>
         <option value="30">近30天</option>
       </select>
     </div>
@@ -569,25 +626,48 @@
     </div>
   </div>
 
-  <!-- ═══ 趋势图 + 竞品监控 ═══ -->
+  <!-- ═══ 趋势图 + 推广花费趋势 ═══ -->
   <div class="grid-2">
-    <!-- 日销售额趋势 -->
+    <!-- 日净销售额趋势 -->
     <div class="card">
       <div class="card-header">
-        <div class="card-title">日销售额趋势</div>
+        <div class="card-title">日净销售额趋势</div>
         <span class="tag tag-new" id="trendTag">近7天</span>
       </div>
       <div class="card-body">
         <div class="chart-container">
           <div class="bar-chart" id="trendChart"></div>
-          <div class="chart-legend" id="chartLegend" style="display:none">
-            <span class="legend-item"><span class="legend-dot" style="background:var(--accent-blue)"></span> 成交金额</span>
-            <span class="legend-item"><span class="legend-dot" style="background:var(--accent-red)"></span> 退款金额</span>
-          </div>
         </div>
       </div>
     </div>
 
+    <!-- 推广花费趋势 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">推广花费趋势</div>
+        <select id="adSceneFilter" onchange="loadAdTrend()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:12px;cursor:pointer">
+          <option value="">全部推广</option>
+          <option value="关键词推广">关键词推广</option>
+          <option value="人群推广">人群推广</option>
+          <option value="货品全站推广">全站推广</option>
+        </select>
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <div class="bar-chart" id="adTrendChart"></div>
+          <div class="chart-legend" id="adChartLegend" style="display:none">
+            <span class="legend-item"><span class="legend-dot" style="background:var(--accent-orange)"></span> 关键词推广</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--accent-green)"></span> 人群推广</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--accent-cyan)"></span> 全站推广</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--accent-blue)"></span> 总花费</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 竞品监控 + 商品排行 ═══ -->
+  <div class="grid-2">
     <!-- 竞品监控 -->
     <div class="card">
       <div class="card-header">
@@ -741,25 +821,76 @@ async function loadTrend() {
     const res = await fetch('/api/trend?days=' + days);
     const d = await res.json();
     const container = document.getElementById('trendChart');
-    const max = Math.max(...d.amounts, ...d.refunds, 1);
-
-    // 显示图例
-    document.getElementById('chartLegend').style.display = 'flex';
+    const max = Math.max(...d.net_amounts.map(v => Math.abs(v)), 1);
 
     container.innerHTML = d.dates.map((date, i) => {
-      const aH = (d.amounts[i] / max) * 180;
-      const rH = (d.refunds[i] / max) * 180;
+      const h = (Math.abs(d.net_amounts[i]) / max) * 200;
       const short = date.slice(5);
-      return `<div class="bar-pair">
-        <div class="bar-value" style="font-size:9px;color:var(--accent-blue)">${fmtMoney(d.amounts[i])}</div>
-        <div class="bar-value" style="font-size:9px;color:var(--accent-red)">${fmtMoney(d.refunds[i])}</div>
-        <div class="bar" style="height:${aH}px;background:linear-gradient(180deg,var(--accent-blue) 0%,#1d4ed8 100%)"></div>
-        <div class="bar" style="height:${rH}px;background:linear-gradient(180deg,var(--accent-red) 0%,#b91c1c 100%)"></div>
+      const isNeg = d.net_amounts[i] < 0;
+      const val = fmtMoney(d.net_amounts[i]);
+      return `<div class="bar-group">
+        <div class="bar-tooltip">${short} — ${val}</div>
+        <div class="bar-value" style="color:${isNeg ? 'var(--accent-red)' : 'var(--accent-green)'}">${val}</div>
+        <div class="bar" style="height:${h}px;background:${isNeg ? 'linear-gradient(0deg,var(--accent-red) 0%,#b91c1c 100%)' : 'linear-gradient(180deg,var(--accent-green) 0%,#059669 100%)'}"></div>
         <div class="bar-label">${short}</div>
       </div>`;
     }).join('');
   } catch(e) {
     console.error('趋势图加载失败:', e);
+  }
+}
+
+// ── 加载推广花费趋势 ──
+async function loadAdTrend() {
+  try {
+    const days = document.getElementById('timeRange').value;
+    const scene = document.getElementById('adSceneFilter').value;
+    const url = scene ? `/api/ad_trend?days=${days}&scene=${encodeURIComponent(scene)}` : `/api/ad_trend?days=${days}`;
+    const res = await fetch(url);
+    const d = await res.json();
+    const container = document.getElementById('adTrendChart');
+    const legend = document.getElementById('adChartLegend');
+
+    if (scene) {
+      // 单一系列
+      const max = Math.max(...d.costs, 1);
+      legend.style.display = 'none';
+      container.innerHTML = d.dates.map((date, i) => {
+        const h = (d.costs[i] / max) * 200;
+        const short = date.slice(5);
+        const colorMap = {'关键词推广': 'var(--accent-orange)', '人群推广': 'var(--accent-green)', '货品全站推广': 'var(--accent-cyan)'};
+        const color = colorMap[scene] || 'var(--accent-blue)';
+        return `<div class="bar-group">
+          <div class="bar-tooltip">${short} — ${fmtMoney(d.costs[i])}</div>
+          <div class="bar-value">${fmtMoney(d.costs[i])}</div>
+          <div class="bar" style="height:${h}px;background:linear-gradient(180deg,${color} 0%,${color}dd 100%)"></div>
+          <div class="bar-label">${short}</div>
+        </div>`;
+      }).join('');
+    } else {
+      // 多系列堆叠/并排
+      const max = Math.max(...d.total_cost, 1);
+      legend.style.display = 'flex';
+      container.innerHTML = d.dates.map((date, i) => {
+        const kH = (d.keyword_cost[i] / max) * 140;
+        const aH = (d.audience_cost[i] / max) * 140;
+        const tH = (d.zhanquan_cost[i] / max) * 140;
+        const sumH = (d.total_cost[i] / max) * 200;
+        const short = date.slice(5);
+        return `<div class="bar-group" style="gap:1px">
+          <div class="bar-tooltip">${short} — 总花费 ${fmtMoney(d.total_cost[i])}<br/>关键词 ${fmtMoney(d.keyword_cost[i])} | 人群 ${fmtMoney(d.audience_cost[i])} | 全站 ${fmtMoney(d.zhanquan_cost[i])}</div>
+          <div class="bar-value" style="font-size:9px">${fmtMoney(d.total_cost[i])}</div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:0">
+            <div class="bar" style="height:${kH}px;background:var(--accent-orange);width:22px"></div>
+            <div class="bar" style="height:${aH}px;background:var(--accent-green);width:22px"></div>
+            <div class="bar" style="height:${tH}px;background:var(--accent-cyan);width:22px"></div>
+          </div>
+          <div class="bar-label">${short}</div>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) {
+    console.error('推广花费趋势加载失败:', e);
   }
 }
 
@@ -962,6 +1093,7 @@ async function loadAll() {
     loadShopOverview(),
     loadKPI(),
     loadTrend(),
+    loadAdTrend(),
     loadCompetitor(),
     loadProductTop(),
     loadTraffic(),

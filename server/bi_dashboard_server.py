@@ -61,7 +61,8 @@ S_KEY = dict(
 # ── 页面入口 ──
 @app.route('/')
 def index():
-    return render_template('bi-dashboard.html')
+    from flask import send_from_directory
+    return send_from_directory('../client', 'bi-dashboard.html')
 
 # ── API: 店铺数据概况 ──
 @app.route('/api/shop_overview')
@@ -128,8 +129,8 @@ def api_shop_overview():
         "audience_cost": round(float(w['audience_cost']), 2),
         "全站推广成本": round(float(w['全站推广成本']), 2),
         "net_profit": round(net_amt - total_cost, 2),
-        "cost_ratio": round(total_cost / pay_amt * 100, 1) if pay_amt > 0 else 0,
-        "roi": round(pay_amt / total_cost, 2) if total_cost > 0 else 0,
+        "cost_ratio": round(total_cost / net_amt * 100, 1) if net_amt > 0 else 0,
+        "roi": round(net_amt / total_cost, 2) if total_cost > 0 else 0,
         "avg_order_value": round(pay_amt / int(s['pay_buyers']), 2) if int(s['pay_buyers']) > 0 else 0,
         "cart_rate": round(int(s['cart_users']) / int(s['visitors']) * 100, 2) if int(s['visitors']) > 0 else 0,
         "pay_rate": round(int(s['pay_buyers']) / int(s['visitors']) * 100, 2) if int(s['visitors']) > 0 else 0,
@@ -188,9 +189,8 @@ def api_trend():
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(f"""
         SELECT {S['stat_date']},
-               COALESCE(SUM({S['pay_amt']}), 0) AS amount,
-               COALESCE(SUM({S['refund_amt']}), 0) AS refund,
-               COALESCE(SUM({S['pay_items']}), 0) AS items
+               COALESCE(SUM({S['pay_amt']}), 0) AS pay_amount,
+               COALESCE(SUM({S['refund_amt']}), 0) AS refund_amount
         FROM sycm_sp_all WHERE {date_filter}
         GROUP BY {S['stat_date']} ORDER BY {S['stat_date']}
     """)
@@ -198,9 +198,60 @@ def api_trend():
     cur.close(); conn.close()
     return jsonify({
         "dates": [str(r[S_KEY['stat_date']]) for r in rows],
-        "amounts": [round(float(r['amount']), 2) for r in rows],
-        "refunds": [round(float(r['refund']), 2) for r in rows],
-        "items": [int(r['items']) for r in rows],
+        "net_amounts": [round(float(r['pay_amount']) - float(r['refund_amount']), 2) for r in rows],
+        "days": days_param,
+    })
+
+# ── API: 推广花费趋势 ──
+@app.route('/api/ad_trend')
+def api_ad_trend():
+    from flask import request
+    days_param = request.args.get('days', '7')
+    if days_param == 'yesterday':
+        date_filter = f"{W['date']} = CURRENT_DATE - INTERVAL '1 day'"
+    else:
+        days = int(days_param)
+        date_filter = f"{W['date']} >= CURRENT_DATE - INTERVAL '{days} days'"
+    filter_scene = request.args.get('scene', '')
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    if filter_scene:
+        cur.execute(f"""
+            SELECT {W['date']}, COALESCE(SUM({W['cost']}), 0) AS cost
+            FROM wj_jhbb_jh
+            WHERE {W['date']} >= CURRENT_DATE - INTERVAL '{days} days'
+              AND {W['scene']} = %s
+            GROUP BY {W['date']} ORDER BY {W['date']}
+        """, (filter_scene,))
+    else:
+        cur.execute(f"""
+            SELECT {W['date']},
+                   COALESCE(SUM(CASE WHEN {W['scene']} = '关键词推广' THEN {W['cost']} ELSE 0 END), 0) AS keyword_cost,
+                   COALESCE(SUM(CASE WHEN {W['scene']} = '人群推广' THEN {W['cost']} ELSE 0 END), 0) AS audience_cost,
+                   COALESCE(SUM(CASE WHEN {W['scene']} = '货品全站推广' THEN {W['cost']} ELSE 0 END), 0) AS zhanquan_cost,
+                   COALESCE(SUM({W['cost']}), 0) AS total_cost
+            FROM wj_jhbb_jh
+            WHERE {date_filter}
+            GROUP BY {W['date']} ORDER BY {W['date']}
+        """)
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+
+    if filter_scene:
+        scene_map = {'关键词推广': 'keyword_cost', '人群推广': 'audience_cost', '货品全站推广': '全站推广成本'}
+        return jsonify({
+            "dates": [str(r[W_KEY['date']]) for r in rows],
+            "costs": [round(float(r['cost']), 2) for r in rows],
+            "scene": filter_scene,
+            "days": days_param,
+        })
+    return jsonify({
+        "dates": [str(r[W_KEY['date']]) for r in rows],
+        "keyword_cost": [round(float(r['keyword_cost']), 2) for r in rows],
+        "audience_cost": [round(float(r['audience_cost']), 2) for r in rows],
+        "全站推广成本": [round(float(r['zhanquan_cost']), 2) for r in rows],
+        "total_cost": [round(float(r['total_cost']), 2) for r in rows],
         "days": days_param,
     })
 
