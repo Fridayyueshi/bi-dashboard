@@ -67,7 +67,12 @@ def index():
 @app.route('/api/shop_overview')
 def api_shop_overview():
     from flask import request
-    days = int(request.args.get('days', 7))
+    days_param = request.args.get('days', '7')
+    if days_param == 'yesterday':
+        date_filter = f"{S['stat_date']} = CURRENT_DATE - INTERVAL '1 day'"
+    else:
+        days = int(days_param)
+        date_filter = f"{S['stat_date']} >= CURRENT_DATE - INTERVAL '{days} days'"
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -81,11 +86,15 @@ def api_shop_overview():
             COALESCE(SUM({S['cart_users']}), 0) AS cart_users,
             COALESCE(SUM({S['cart_items']}), 0) AS cart_items
         FROM sycm_sp_all
-        WHERE {S['stat_date']} >= CURRENT_DATE - INTERVAL '{days} days'
+        WHERE {date_filter}
     """)
     s = cur.fetchone()
 
     # 无界 — 推广花费（按场景分类）
+    if days_param == 'yesterday':
+        w_filter = f"{W['date']} = CURRENT_DATE - INTERVAL '1 day'"
+    else:
+        w_filter = f"{W['date']} >= CURRENT_DATE - INTERVAL '{days} days'"
     cur.execute(f"""
         SELECT
             COALESCE(SUM({W['cost']}), 0) AS total_cost,
@@ -95,7 +104,7 @@ def api_shop_overview():
             COALESCE(SUM(CASE WHEN {W['scene']} = '超级短视频' THEN {W['cost']} ELSE 0 END), 0) AS video_cost,
             COALESCE(SUM(CASE WHEN {W['scene']} = '店铺直达' THEN {W['cost']} ELSE 0 END), 0) AS direct_cost
         FROM wj_jhbb_jh
-        WHERE {W['date']} >= CURRENT_DATE - INTERVAL '{days} days'
+        WHERE {w_filter}
     """)
     w = cur.fetchone()
     cur.close()
@@ -107,21 +116,17 @@ def api_shop_overview():
     total_cost = float(w['total_cost'])
 
     return jsonify({
-        # 成交指标
         "pay_amount": round(pay_amt, 2),
         "refund_amount": round(refund_amt, 2),
         "net_amount": round(net_amt, 2),
-        # 流量指标
         "visitors": int(s['visitors']),
         "pay_buyers": int(s['pay_buyers']),
         "cart_users": int(s['cart_users']),
         "cart_items": int(s['cart_items']),
-        # 推广花费
         "total_cost": round(total_cost, 2),
         "keyword_cost": round(float(w['keyword_cost']), 2),
         "audience_cost": round(float(w['audience_cost']), 2),
         "全站推广成本": round(float(w['全站推广成本']), 2),
-        # 衍生指标
         "net_profit": round(net_amt - total_cost, 2),
         "cost_ratio": round(total_cost / pay_amt * 100, 1) if pay_amt > 0 else 0,
         "roi": round(pay_amt / total_cost, 2) if total_cost > 0 else 0,
@@ -173,7 +178,12 @@ def api_kpi():
 @app.route('/api/trend')
 def api_trend():
     from flask import request
-    days = int(request.args.get('days', 7))
+    days_param = request.args.get('days', '7')
+    if days_param == 'yesterday':
+        date_filter = f"{S['stat_date']} = CURRENT_DATE - INTERVAL '1 day'"
+    else:
+        days = int(days_param)
+        date_filter = f"{S['stat_date']} >= CURRENT_DATE - INTERVAL '{days} days'"
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(f"""
@@ -181,7 +191,7 @@ def api_trend():
                COALESCE(SUM({S['pay_amt']}), 0) AS amount,
                COALESCE(SUM({S['refund_amt']}), 0) AS refund,
                COALESCE(SUM({S['pay_items']}), 0) AS items
-        FROM sycm_sp_all WHERE {S['stat_date']} >= CURRENT_DATE - INTERVAL '{days} days'
+        FROM sycm_sp_all WHERE {date_filter}
         GROUP BY {S['stat_date']} ORDER BY {S['stat_date']}
     """)
     rows = cur.fetchall()
@@ -191,7 +201,7 @@ def api_trend():
         "amounts": [round(float(r['amount']), 2) for r in rows],
         "refunds": [round(float(r['refund']), 2) for r in rows],
         "items": [int(r['items']) for r in rows],
-        "days": days,
+        "days": days_param,
     })
 
 # ── API: 商品支付TOP5 ──
