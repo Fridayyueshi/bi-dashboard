@@ -258,6 +258,38 @@
       margin-top: 4px;
     }
 
+    /* 双柱并排 */
+    .bar-pair {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .bar-pair .bar {
+      width: 28px;
+    }
+
+    .chart-legend {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      padding: 8px 0 4px;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+
     .bar-value {
       font-size: 11px;
       color: var(--text-secondary);
@@ -401,6 +433,11 @@
     <div class="logo">🏪 南巢 BI 看板</div>
     <div class="date-range">
       📅 <span id="dateRange">加载中...</span>
+      <select id="timeRange" onchange="changeTimeRange(this.value)" style="margin-left:8px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:12px;cursor:pointer">
+        <option value="7">近7天</option>
+        <option value="14">近14天</option>
+        <option value="30">近30天</option>
+      </select>
     </div>
   </div>
   <div class="header-right">
@@ -537,11 +574,15 @@
     <div class="card">
       <div class="card-header">
         <div class="card-title">日销售额趋势</div>
-        <span class="tag tag-new">近7天</span>
+        <span class="tag tag-new" id="trendTag">近7天</span>
       </div>
       <div class="card-body">
         <div class="chart-container">
           <div class="bar-chart" id="trendChart"></div>
+          <div class="chart-legend" id="chartLegend" style="display:none">
+            <span class="legend-item"><span class="legend-dot" style="background:var(--accent-blue)"></span> 成交金额</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--accent-red)"></span> 退款金额</span>
+          </div>
         </div>
       </div>
     </div>
@@ -639,7 +680,8 @@ function trendText(pct) {
 // ── 加载店铺数据概况 ──
 async function loadShopOverview() {
   try {
-    const res = await fetch('/api/shop_overview');
+    const days = document.getElementById('timeRange').value;
+    const res = await fetch('/api/shop_overview?days=' + days);
     const d = await res.json();
 
     // 成交与流量
@@ -694,23 +736,38 @@ async function loadKPI() {
 // ── 加载趋势图 ──
 async function loadTrend() {
   try {
-    const res = await fetch('/api/trend');
+    const days = document.getElementById('timeRange').value;
+    const res = await fetch('/api/trend?days=' + days);
     const d = await res.json();
     const container = document.getElementById('trendChart');
-    const max = Math.max(...d.amounts, 1);
+    const max = Math.max(...d.amounts, ...d.refunds, 1);
+
+    // 更新标签
+    document.getElementById('trendTag').textContent = '近' + d.days + '天';
+
+    // 显示图例
+    document.getElementById('chartLegend').style.display = 'flex';
 
     container.innerHTML = d.dates.map((date, i) => {
-      const h = (d.amounts[i] / max) * 200;
+      const aH = (d.amounts[i] / max) * 180;
+      const rH = (d.refunds[i] / max) * 180;
       const short = date.slice(5);
-      return `<div class="bar-group">
-        <div class="bar-value">${fmtMoney(d.amounts[i])}</div>
-        <div class="bar" style="height:${h}px"></div>
+      return `<div class="bar-pair">
+        <div class="bar-value" style="font-size:9px;color:var(--accent-blue)">${fmtMoney(d.amounts[i])}</div>
+        <div class="bar-value" style="font-size:9px;color:var(--accent-red)">${fmtMoney(d.refunds[i])}</div>
+        <div class="bar" style="height:${aH}px;background:linear-gradient(180deg,var(--accent-blue) 0%,#1d4ed8 100%)"></div>
+        <div class="bar" style="height:${rH}px;background:linear-gradient(180deg,var(--accent-red) 0%,#b91c1c 100%)"></div>
         <div class="bar-label">${short}</div>
       </div>`;
     }).join('');
   } catch(e) {
     console.error('趋势图加载失败:', e);
   }
+}
+
+// ── 切换时间范围 ──
+function changeTimeRange(val) {
+  loadAll();
 }
 
 // ── 加载竞品监控 ──
@@ -880,9 +937,10 @@ async function loadAll() {
 
   // 设置日期范围
   const today = new Date();
-  const lastWeek = new Date(today);
-  lastWeek.setDate(lastWeek.getDate() - 6);
-  document.getElementById('dateRange').textContent = `${lastWeek.toISOString().slice(0,10)} ~ ${today.toISOString().slice(0,10)}`;
+  const days = parseInt(document.getElementById('timeRange').value);
+  const lastDate = new Date(today);
+  lastDate.setDate(lastDate.getDate() - (days - 1));
+  document.getElementById('dateRange').textContent = `${lastDate.toISOString().slice(0,10)} ~ ${today.toISOString().slice(0,10)}`;
 
   await Promise.all([
     loadShopOverview(),

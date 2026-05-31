@@ -66,7 +66,8 @@ def index():
 # ── API: 店铺数据概况 ──
 @app.route('/api/shop_overview')
 def api_shop_overview():
-    """店铺维度核心指标汇总（近7日）"""
+    from flask import request
+    days = int(request.args.get('days', 7))
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -80,7 +81,7 @@ def api_shop_overview():
             COALESCE(SUM({S['cart_users']}), 0) AS cart_users,
             COALESCE(SUM({S['cart_items']}), 0) AS cart_items
         FROM sycm_sp_all
-        WHERE {S['stat_date']} >= CURRENT_DATE - INTERVAL '7 days'
+        WHERE {S['stat_date']} >= CURRENT_DATE - INTERVAL '{days} days'
     """)
     s = cur.fetchone()
 
@@ -94,7 +95,7 @@ def api_shop_overview():
             COALESCE(SUM(CASE WHEN {W['scene']} = '超级短视频' THEN {W['cost']} ELSE 0 END), 0) AS video_cost,
             COALESCE(SUM(CASE WHEN {W['scene']} = '店铺直达' THEN {W['cost']} ELSE 0 END), 0) AS direct_cost
         FROM wj_jhbb_jh
-        WHERE {W['date']} >= CURRENT_DATE - INTERVAL '7 days'
+        WHERE {W['date']} >= CURRENT_DATE - INTERVAL '{days} days'
     """)
     w = cur.fetchone()
     cur.close()
@@ -171,13 +172,16 @@ def api_kpi():
 # ── API: 日销售额趋势 ──
 @app.route('/api/trend')
 def api_trend():
+    from flask import request
+    days = int(request.args.get('days', 7))
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(f"""
         SELECT {S['stat_date']},
                COALESCE(SUM({S['pay_amt']}), 0) AS amount,
+               COALESCE(SUM({S['refund_amt']}), 0) AS refund,
                COALESCE(SUM({S['pay_items']}), 0) AS items
-        FROM sycm_sp_all WHERE {S['stat_date']} >= CURRENT_DATE - INTERVAL '7 days'
+        FROM sycm_sp_all WHERE {S['stat_date']} >= CURRENT_DATE - INTERVAL '{days} days'
         GROUP BY {S['stat_date']} ORDER BY {S['stat_date']}
     """)
     rows = cur.fetchall()
@@ -185,7 +189,9 @@ def api_trend():
     return jsonify({
         "dates": [str(r[S_KEY['stat_date']]) for r in rows],
         "amounts": [round(float(r['amount']), 2) for r in rows],
+        "refunds": [round(float(r['refund']), 2) for r in rows],
         "items": [int(r['items']) for r in rows],
+        "days": days,
     })
 
 # ── API: 商品支付TOP5 ──
