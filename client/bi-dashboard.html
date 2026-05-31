@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>南巢店铺 BI 看板</title>
+  <style>
+    :root {
+      --bg-dark: #0f1419;
+      --bg-card: #1a2028;
+      --bg-card-hover: #222a36;
+      --border: #2a3441;
+      --text-primary: #e8eaed;
+      --text-secondary: #8b98a5;
+      --text-muted: #5a6a7a;
+      --accent-green: #10b981;
+      --accent-blue: #3b82f6;
+      --accent-orange: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-purple: #8b5cf6;
+      --accent-cyan: #06b6d4;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    /* ── 顶部导航 ── */
+    .header {
+      background: linear-gradient(135deg, #1a2028 0%, #1e2530 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent-orange);
+      letter-spacing: 1px;
+    }
+
+    .date-range {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-dark);
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .date-range span { color: var(--text-primary); font-weight: 500; }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .refresh-btn {
+      background: var(--accent-blue);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .refresh-btn:hover { background: #2563eb; }
+    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .last-update {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ── 主容器 ── */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* ── KPI 卡片行 ── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .kpi-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .kpi-trend {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 6px;
+      font-size: 12px;
+    }
+
+    .trend-up { color: var(--accent-green); }
+    .trend-down { color: var(--accent-red); }
+    .trend-flat { color: var(--text-muted); }
+
+    .kpi-icon {
+      float: right;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      opacity: 0.8;
+    }
+
+    /* ── 网格布局 ── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    /* ── 通用卡片 ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      width: 3px;
+      height: 14px;
+      border-radius: 2px;
+      background: var(--accent-blue);
+    }
+
+    .card-body {
+      padding: 16px 20px;
+    }
+
+    /* ── 图表 ── */
+    .chart-container {
+      height: 280px;
+      position: relative;
+    }
+
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      height: 240px;
+      padding: 20px 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bar-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .bar {
+      width: 36px;
+      border-radius: 4px 4px 0 0;
+      background: linear-gradient(180deg, var(--accent-blue) 0%, #1d4ed8 100%);
+      transition: height 0.5s ease-out;
+      min-height: 2px;
+    }
+
+    .bar-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .bar-value {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    /* ── 表格 ── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.03);
+      color: var(--text-secondary);
+      font-weight: 500;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+
+    .data-table tr:hover td {
+      background: var(--bg-card-hover);
+    }
+
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .rank-1 { background: var(--accent-orange); color: white; }
+    .rank-2 { background: var(--accent-cyan); color: white; }
+    .rank-3 { background: var(--accent-purple); color: white; }
+    .rank-other { background: var(--border); color: var(--text-secondary); }
+
+    /* ── 进度条 ── */
+    .progress-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s ease-out;
+    }
+
+    /* ── 情感分析饼图 ── */
+    .sentiment-ring {
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .ring-container {
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+
+    .ring {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      transition: background 0.5s;
+    }
+
+    .ring-inner {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      width: 110px;
+      height: 110px;
+      background: var(--bg-card);
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ring-inner .big {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent-green);
+    }
+
+    .ring-inner .small {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .sentiment-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .legend-count {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-left: auto;
+    }
+
+    /* ── 标签 ── */
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .tag-hot { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+    .tag-new { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+    .tag-good { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+
+    /* ── 加载动画 ── */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      color: var(--text-muted);
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 12px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── 响应式 ── */
+    @media (max-width: 1200px) {
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .kpi-row { grid-template-columns: 1fr; }
+      .grid-3 { grid-template-columns: 1fr; }
+      .header { flex-direction: column; gap: 12px; padding: 16px; }
+    }
+
+    /* ── 动画 ── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .kpi-card, .card {
+      animation: fadeInUp 0.4s ease-out;
+    }
+    .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+    .kpi-card:nth-child(2) { animation-delay: 0.1s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+    .kpi-card:nth-child(4) { animation-delay: 0.2s; }
+
+    /* ── 页脚 ── */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-muted);
+      font-size: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── 顶部 ── -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">🏪 南巢 BI 看板</div>
+    <div class="date-range">
+      📅 <span id="dateRange">加载中...</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-update" id="lastUpdate"></span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">🔄 刷新数据</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ═══ KPI 卡片 ═══ -->
+  <div class="kpi-row" id="kpiRow">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(59,130,246,0.15)">💰</div>
+      <div class="kpi-label">支付金额（7日）</div>
+      <div class="kpi-value" id="kpiAmount">¥0</div>
+      <div class="kpi-trend" id="kpiAmountTrend"></div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(16,185,129,0.15)">📦</div>
+      <div class="kpi-label">支付件数</div>
+      <div class="kpi-value" id="kpiItems">0</div>
+      <div class="kpi-trend" id="kpiItemsTrend"></div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(245,158,11,0.15)">👤</div>
+      <div class="kpi-label">支付买家数</div>
+      <div class="kpi-value" id="kpiBuyers">0</div>
+      <div class="kpi-trend trend-flat">— 实时</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(239,68,68,0.15)">📉</div>
+      <div class="kpi-label">退款金额</div>
+      <div class="kpi-value" id="kpiRefund">¥0</div>
+      <div class="kpi-trend trend-down">—</div>
+    </div>
+  </div>
+
+  <!-- ═══ 趋势图 + 竞品监控 ═══ -->
+  <div class="grid-2">
+    <!-- 日销售额趋势 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">日销售额趋势</div>
+        <span class="tag tag-new">近7天</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <div class="bar-chart" id="trendChart"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 竞品监控 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">竞品监控</div>
+        <span class="tag tag-hot">实时</span>
+      </div>
+      <div class="card-body" id="competitorTable">
+        <div class="loading"><div class="spinner"></div>加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 商品排行 + 情感分析 + 流量来源 ═══ -->
+  <div class="grid-3">
+    <!-- 商品排行 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">商品支付TOP5</div>
+      </div>
+      <div class="card-body" id="productTopTable">
+        <div class="loading"><div class="spinner"></div>加载中...</div>
+      </div>
+    </div>
+
+    <!-- 评价情感分析 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">评价情感分析</div>
+        <span class="tag tag-good" id="sentimentTag">共0条</span>
+      </div>
+      <div class="card-body">
+        <div class="sentiment-ring">
+          <div class="ring-container">
+            <div class="ring" id="sentimentRing"></div>
+            <div class="ring-inner">
+              <div class="big" id="sentimentRate">0%</div>
+              <div class="small">好评率</div>
+            </div>
+          </div>
+          <div class="sentiment-legend" id="sentimentLegend"></div>
+        </div>
+        <div style="margin-top:16px;text-align:center;font-size:12px;color:var(--text-muted)">
+          数据来自竞品晨物家居-餐桌椅 | 情感分类基于关键词+否定词处理
+        </div>
+      </div>
+    </div>
+
+    <!-- 流量来源 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">流量来源分布</div>
+      </div>
+      <div class="card-body" id="trafficTable">
+        <div class="loading"><div class="spinner"></div>加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 关键词上升 + 无界报表概览 ═══ -->
+  <div class="grid-2">
+    <!-- 住宅家具关键词上升 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">住宅家具关键词上升TOP10</div>
+        <span class="tag tag-hot">今日</span>
+      </div>
+      <div class="card-body" id="keywordsTable">
+        <div class="loading"><div class="spinner"></div>加载中...</div>
+      </div>
+    </div>
+
+    <!-- 无界报表概览 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">无界报表数据概览</div>
+        <span class="tag tag-new">近7日</span>
+      </div>
+      <div class="card-body" id="reportsGrid">
+        <div class="loading"><div class="spinner"></div>加载中...</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  🏪 南巢店铺 BI 看板 | <span id="footerTime"></span> | 数据来源: 生意参谋 + 无界 + 竞品监控
+</div>
+
+<script>
+// ── 工具函数 ──
+function fmt(n) {
+  return n >= 10000 ? (n / 10000).toFixed(1) + '万' : n.toLocaleString();
+}
+
+function fmtMoney(n) {
+  return '¥' + (n || 0).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+}
+
+function trendClass(pct) {
+  const v = parseFloat(pct);
+  if (v > 0) return 'trend-up';
+  if (v < 0) return 'trend-down';
+  return 'trend-flat';
+}
+
+function trendText(pct) {
+  const v = parseFloat(pct);
+  if (v > 0) return `▲ ${pct}% 较上周`;
+  if (v < 0) return `▼ ${Math.abs(v)}% 较上周`;
+  return '— 持平 较上周';
+}
+
+// ── 加载 KPI ──
+async function loadKPI() {
+  try {
+    const res = await fetch('/api/kpi');
+    const d = await res.json();
+    document.getElementById('kpiAmount').textContent = fmtMoney(d.payment_amount);
+    document.getElementById('kpiItems').textContent = fmt(d.payment_items);
+    document.getElementById('kpiBuyers').textContent = fmt(d.buyers);
+    document.getElementById('kpiRefund').textContent = fmtMoney(d.refund_amount);
+
+    const amtTrend = document.getElementById('kpiAmountTrend');
+    amtTrend.className = 'kpi-trend ' + trendClass(d.amount_trend);
+    amtTrend.textContent = trendText(d.amount_trend);
+
+    const itemsTrend = document.getElementById('kpiItemsTrend');
+    itemsTrend.className = 'kpi-trend ' + trendClass(d.items_trend);
+    itemsTrend.textContent = trendText(d.items_trend);
+  } catch(e) {
+    console.error('KPI 加载失败:', e);
+  }
+}
+
+// ── 加载趋势图 ──
+async function loadTrend() {
+  try {
+    const res = await fetch('/api/trend');
+    const d = await res.json();
+    const container = document.getElementById('trendChart');
+    const max = Math.max(...d.amounts, 1);
+
+    container.innerHTML = d.dates.map((date, i) => {
+      const h = (d.amounts[i] / max) * 200;
+      const short = date.slice(5);
+      return `<div class="bar-group">
+        <div class="bar-value">${fmtMoney(d.amounts[i])}</div>
+        <div class="bar" style="height:${h}px"></div>
+        <div class="bar-label">${short}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    console.error('趋势图加载失败:', e);
+  }
+}
+
+// ── 加载竞品监控 ──
+async function loadCompetitor() {
+  try {
+    const res = await fetch('/api/competitor');
+    const data = await res.json();
+    const container = document.getElementById('competitorTable');
+
+    if (!data.length) {
+      container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px">暂无竞品数据</div>';
+      return;
+    }
+
+    container.innerHTML = `<table class="data-table">
+      <thead><tr><th>竞品</th><th>价格区间</th><th>今日库存</th><th>预估日销</th><th>评价</th></tr></thead>
+      <tbody>
+        ${data.map(c => `<tr>
+          <td>${c.name}</td>
+          <td>${c.price_range}</td>
+          <td>${c.total_skus} 个SKU</td>
+          <td style="color:var(--accent-green)">${c.has_price_change ? '⚠️ 有调价' : '—'}</td>
+          <td>${c.total_reviews} 条评价</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    console.error('竞品加载失败:', e);
+  }
+}
+
+// ── 加载商品TOP5 ──
+async function loadProductTop() {
+  try {
+    const res = await fetch('/api/product_top');
+    const data = await res.json();
+    const container = document.getElementById('productTopTable');
+
+    if (!data.length) {
+      container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px">暂无数据</div>';
+      return;
+    }
+
+    container.innerHTML = `<table class="data-table">
+      <thead><tr><th></th><th>商品</th><th>支付金额</th><th>占比</th></tr></thead>
+      <tbody>
+        ${data.map((p, i) => {
+          const ranks = ['rank-1','rank-2','rank-3','rank-other','rank-other'];
+          return `<tr>
+            <td><span class="rank-badge ${ranks[i]}">${i+1}</span></td>
+            <td>${p.name}</td>
+            <td>${fmtMoney(p.amount)}</td>
+            <td>
+              <div class="progress-bar"><div class="progress-fill" style="width:${p.share}%;background:var(--accent-${i<3?'orange':'blue'})"></div></div>
+              <span style="color:var(--text-muted);font-size:11px">${p.share}%</span>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    console.error('商品TOP5加载失败:', e);
+  }
+}
+
+// ── 加载情感分析 ──
+async function loadSentiment() {
+  try {
+    const res = await fetch('/api/sentiment');
+    const d = await res.json();
+    const total = d.total || 1;
+
+    document.getElementById('sentimentTag').textContent = `共${d.total}条`;
+    document.getElementById('sentimentRate').textContent = d.good_rate + '%';
+
+    const goodDeg = d.good / total * 360;
+    const neuDeg = d.neutral / total * 360;
+    const badDeg = d.bad / total * 360;
+
+    document.getElementById('sentimentRing').style.background =
+      `conic-gradient(var(--accent-green) 0deg ${goodDeg}deg, var(--accent-orange) ${goodDeg}deg ${goodDeg+neuDeg}deg, var(--accent-red) ${goodDeg+neuDeg}deg 360deg)`;
+
+    document.getElementById('sentimentLegend').innerHTML = `
+      <div class="legend-item">
+        <span class="legend-dot" style="background:var(--accent-green)"></span>
+        <span>好评</span>
+        <span class="legend-count">${d.good}条</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot" style="background:var(--accent-orange)"></span>
+        <span>中评</span>
+        <span class="legend-count">${d.neutral}条</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot" style="background:var(--accent-red)"></span>
+        <span>差评</span>
+        <span class="legend-count">${d.bad}条</span>
+      </div>
+    `;
+  } catch(e) {
+    console.error('情感分析加载失败:', e);
+  }
+}
+
+// ── 加载流量来源 ──
+async function loadTraffic() {
+  try {
+    const res = await fetch('/api/traffic');
+    const data = await res.json();
+    const container = document.getElementById('trafficTable');
+
+    if (!data.length) {
+      container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px">暂无数据</div>';
+      return;
+    }
+
+    const totalClicks = data.reduce((s, t) => s + t.clicks, 0) || 1;
+
+    container.innerHTML = `<table class="data-table">
+      <thead><tr><th>来源</th><th>点击量</th><th>占比</th></tr></thead>
+      <tbody>
+        ${data.map(t => {
+          const pct = (t.clicks / totalClicks * 100).toFixed(0);
+          const colors = ['blue','green','orange','purple','cyan'];
+          return `<tr>
+            <td>${t.source}</td>
+            <td>${fmt(t.clicks)}</td>
+            <td>
+              <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:var(--accent-${colors[data.indexOf(t)]})"></div></div>
+              <span style="color:var(--text-muted);font-size:11px">${pct}%</span>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    console.error('流量来源加载失败:', e);
+  }
+}
+
+// ── 加载关键词 ──
+async function loadKeywords() {
+  try {
+    const res = await fetch('/api/keywords');
+    const data = await res.json();
+    const container = document.getElementById('keywordsTable');
+
+    if (!data.length) {
+      container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px">暂无数据</div>';
+      return;
+    }
+
+    container.innerHTML = `<table class="data-table">
+      <thead><tr><th></th><th>关键词</th><th>展现量</th><th>点击量</th></tr></thead>
+      <tbody>
+        ${data.map((k, i) => {
+          const ranks = ['rank-1','rank-2','rank-3','rank-other','rank-other','rank-other','rank-other','rank-other','rank-other','rank-other'];
+          return `<tr>
+            <td><span class="rank-badge ${ranks[i]}">${i+1}</span></td>
+            <td>${k.keyword}</td>
+            <td>${fmt(k.impressions)}</td>
+            <td>${fmt(k.clicks)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    console.error('关键词加载失败:', e);
+  }
+}
+
+// ── 加载报表概览 ──
+async function loadReports() {
+  try {
+    const res = await fetch('/api/reports');
+    const data = await res.json();
+    const container = document.getElementById('reportsGrid');
+
+    const colors = ['blue','green','orange','purple','cyan','accent','red'];
+    const icons = ['💰','📦','🌍','📊','📝','👥','🎯'];
+    const names = {
+      '商品报表': '商品报表', '单元报表': '单元报表', '地域报表': '地域报表',
+      '计划报表': '计划报表', '内容报表': '内容报表', '人群报表': '人群报表',
+      '营销场景报表': '营销场景'
+    };
+
+    container.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      ${Object.entries(data).map(([key, val], i) => `
+        <div style="background:var(--bg-dark);border-radius:8px;padding:14px;text-align:center">
+          <div style="font-size:12px;color:var(--text-secondary)">${names[key] || key}</div>
+          <div style="font-size:22px;font-weight:700;color:var(--accent-${colors[i]});margin-top:4px">${fmt(val)}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">条记录</div>
+        </div>
+      `).join('')}
+    </div>`;
+  } catch(e) {
+    console.error('报表概览加载失败:', e);
+  }
+}
+
+// ── 加载全部 ──
+async function loadAll() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.textContent = '🔄 加载中...';
+
+  // 设置日期范围
+  const today = new Date();
+  const lastWeek = new Date(today);
+  lastWeek.setDate(lastWeek.getDate() - 6);
+  document.getElementById('dateRange').textContent = `${lastWeek.toISOString().slice(0,10)} ~ ${today.toISOString().slice(0,10)}`;
+
+  await Promise.all([
+    loadKPI(),
+    loadTrend(),
+    loadCompetitor(),
+    loadProductTop(),
+    loadSentiment(),
+    loadTraffic(),
+    loadKeywords(),
+    loadReports(),
+  ]);
+
+  const now = new Date().toLocaleString('zh-CN');
+  document.getElementById('lastUpdate').textContent = `更新于 ${now}`;
+  document.getElementById('footerTime').textContent = `数据更新: ${now}`;
+
+  btn.disabled = false;
+  btn.textContent = '🔄 刷新数据';
+}
+
+// ── 初始化 ──
+loadAll();
+</script>
+
+</body>
+</html>
