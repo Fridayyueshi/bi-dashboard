@@ -94,6 +94,22 @@
       color: var(--text-muted);
     }
 
+    .logout-btn {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .logout-btn:hover {
+      color: var(--accent-red);
+      border-color: var(--accent-red);
+      background: rgba(239, 68, 68, 0.08);
+    }
+
     /* ── 主布局 ── */
     .layout {
       display: flex;
@@ -632,6 +648,7 @@
   </div>
   <div class="header-right">
     <span class="last-update" id="lastUpdate"></span>
+    <button class="logout-btn" onclick="doLogout()">退出登录</button>
     <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">🔄 刷新数据</button>
   </div>
 </div>
@@ -1358,6 +1375,15 @@ async function doLogin() {
     btn.disabled = false;
     btn.textContent = '登 录';
   }
+}
+
+async function doLogout() {
+  try {
+    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  } catch(e) { /* ignore */ }
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginOverlay').classList.remove('hidden');
 }
 
 // ── 页面切换 ──

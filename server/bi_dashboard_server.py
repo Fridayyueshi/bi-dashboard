@@ -45,22 +45,6 @@ def get_conn():
 def hash_pwd(pwd):
     return hashlib.sha256(pwd.encode()).hexdigest()
 
-def get_client_ip():
-    """获取客户端真实 IP，优先 X-Forwarded-For"""
-    forwarded = request.headers.get('X-Forwarded-For', '')
-    if forwarded:
-        return forwarded.split(',')[0].strip()
-    return request.remote_addr or '127.0.0.1'
-
-def check_ip_whitelist(ip):
-    """检查 IP 是否在白名单中"""
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM bi_ip_whitelist WHERE ip_address = %s", (ip,))
-    count = cur.fetchone()[0]
-    cur.close(); conn.close()
-    return count > 0
-
 def verify_user(username, password):
     """验证用户名密码"""
     conn = get_conn()
@@ -124,11 +108,6 @@ def api_login():
 
     if not username or not password:
         return jsonify({"error": "请输入用户名和密码"}), 400
-
-    # 检查 IP 白名单
-    client_ip = get_client_ip()
-    if not check_ip_whitelist(client_ip):
-        return jsonify({"error": f"IP {client_ip} 不在白名单中，请联系管理员"}), 403
 
     # 验证用户
     user = verify_user(username, password)
