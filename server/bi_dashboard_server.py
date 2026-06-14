@@ -1,27 +1,34 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-南巢店铺 BI 看板 — 后端服务
+nanchao BI dashboard backend server
 
-依赖: pip install flask flask-cors psycopg2-binary
-启动: python bi_dashboard_server.py
-访问: http://127.0.0.1:5000
+Dependencies: pip install flask flask-cors psycopg2-binary
+Run: python bi_dashboard_server.py
+Visit: http://127.0.0.1:5000
 
-环境变量:
-  DB_HOST     数据库主机 (默认: 172.17.80.1)
-  DB_PORT     数据库端口 (默认: 5432)
-  DB_NAME     数据库名 (默认: postgres)
-  DB_USER     用户名 (默认: postgres)
-  DB_PASSWORD 密码 (默认: a123456)
+Environment:
+  DB_HOST     database host (default: 172.17.80.1)
+  DB_PORT     database port (default: 5432)
+  DB_NAME     database name (default: postgres)
+  DB_USER     database user (default: postgres)
+  DB_PASSWORD database password (default: a123456)
+  SECRET_KEY  Flask session key (default: nanchao-bi-secret-2026)
 """
 
 import os
-from datetime import datetime
-from flask import Flask, jsonify, render_template
+import hashlib
+from datetime import datetime, timedelta
+from functools import wraps
+from flask import Flask, jsonify, request, session, send_from_directory
 from flask_cors import CORS
 import psycopg2
 import psycopg2.extras
 
 app = Flask(__name__, static_folder='.', template_folder='.')
-CORS(app)
+app.secret_key = os.environ.get("SECRET_KEY", "nanchao-bi-secret-2026")
+app.permanent_session_lifetime = timedelta(hours=8)
+CORS(app, supports_credentials=True)
 
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST", "172.17.80.1"),
@@ -33,6 +40,56 @@ DB_CONFIG = {
 
 def get_conn():
     return psycopg2.connect(**DB_CONFIG)
+
+# ── 工具函数 ──
+def hash_pwd(pwd):
+    return hashlib.sha256(pwd.encode()).hexdigest()
+
+def get_client_ip():
+    """获取客户端真实 IP，优先 X-Forwarded-For"""
+    forwarded = request.headers.get('X-Forwarded-For', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.remote_addr or '127.0.0.1'
+
+def check_ip_whitelist(ip):
+    """检查 IP 是否在白名单中"""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM bi_ip_whitelist WHERE ip_address = %s", (ip,))
+    count = cur.fetchone()[0]
+    cur.close(); conn.close()
+    return count > 0
+
+def verify_user(username, password):
+    """验证用户名密码"""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        "SELECT id, username, display_name, role, is_active FROM bi_users WHERE username = %s AND password = %s",
+        (username, hash_pwd(password))
+    )
+    user = cur.fetchone()
+    if user:
+        # 更新最后登录时间
+        cur.execute("UPDATE bi_users SET last_login = CURRENT_TIMESTAMP WHERE id = %s", (user['id'],))
+        conn.commit()
+    cur.close(); conn.close()
+    return user
+
+# ── 登录验证装饰器 ──
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({"error": "未登录", "code": "AUTH_REQUIRED"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+# ── 页面入口 ──
+@app.route('/')
+def index():
+    return send_from_directory('../client', 'bi-dashboard.html')
 
 # ── 列名(双引号保留大小写) ──
 S = dict(
@@ -58,14 +115,61 @@ S_KEY = dict(
     cart_users='商品加购人数', cart_items='商品加购件数',
 )
 
-# ── 页面入口 ──
-@app.route('/')
-def index():
-    from flask import send_from_directory
-    return send_from_directory('../client', 'bi-dashboard.html')
+# ── API: 登录/登出/会话检查 ──
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json(silent=True) or {}
+    username = data.get('username', '')
+    password = data.get('password', '')
+
+    if not username or not password:
+        return jsonify({"error": "请输入用户名和密码"}), 400
+
+    # 检查 IP 白名单
+    client_ip = get_client_ip()
+    if not check_ip_whitelist(client_ip):
+        return jsonify({"error": f"IP {client_ip} 不在白名单中，请联系管理员"}), 403
+
+    # 验证用户
+    user = verify_user(username, password)
+    if not user:
+        return jsonify({"error": "用户名或密码错误"}), 401
+
+    session.permanent = True
+    session['user_id'] = user['id']
+    session['username'] = user['username']
+    session['display_name'] = user['display_name']
+    session['role'] = user['role']
+    return jsonify({
+        "ok": True,
+        "user": {
+            "username": user['username'],
+            "display_name": user['display_name'],
+            "role": user['role'],
+        }
+    })
+
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    session.clear()
+    return jsonify({"ok": True})
+
+@app.route('/api/check_session')
+def api_check_session():
+    if 'user_id' in session:
+        return jsonify({
+            "ok": True,
+            "user": {
+                "username": session.get('username'),
+                "display_name": session.get('display_name'),
+                "role": session.get('role'),
+            }
+        })
+    return jsonify({"ok": False, "error": "未登录"}), 401
 
 # ── API: 店铺数据概况 ──
 @app.route('/api/shop_overview')
+@login_required
 def api_shop_overview():
     from flask import request
     days_param = request.args.get('days', '7')
@@ -138,6 +242,7 @@ def api_shop_overview():
 
 # ── API: KPI（旧版，保留兼容） ──
 @app.route('/api/kpi')
+@login_required
 def api_kpi():
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -177,6 +282,7 @@ def api_kpi():
 
 # ── API: 日销售额趋势 ──
 @app.route('/api/trend')
+@login_required
 def api_trend():
     from flask import request
     days_param = request.args.get('days', '7')
@@ -204,6 +310,7 @@ def api_trend():
 
 # ── API: 推广花费趋势 ──
 @app.route('/api/ad_trend')
+@login_required
 def api_ad_trend():
     from flask import request
     days_param = request.args.get('days', '7')
@@ -257,6 +364,7 @@ def api_ad_trend():
 
 # ── API: 商品支付TOP5 ──
 @app.route('/api/product_top')
+@login_required
 def api_product_top():
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -279,6 +387,7 @@ def api_product_top():
 
 # ── API: 竞品监控 ──
 @app.route('/api/competitor')
+@login_required
 def api_competitor():
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -304,6 +413,7 @@ def api_competitor():
 
 # ── API: 竞品SKU预估销售额 ──
 @app.route('/api/competitor_sales')
+@login_required
 def api_competitor_sales():
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -331,6 +441,7 @@ def api_competitor_sales():
 
 # ── API: 流量来源 ──
 @app.route('/api/traffic')
+@login_required
 def api_traffic():
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -352,6 +463,7 @@ def api_traffic():
 
 # ── API: 关键词 ──
 @app.route('/api/keywords')
+@login_required
 def api_keywords():
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -373,6 +485,7 @@ def api_keywords():
 
 # ── API: 报表概览 ──
 @app.route('/api/reports')
+@login_required
 def api_reports():
     conn = get_conn()
     cur = conn.cursor()
@@ -391,6 +504,7 @@ def api_reports():
 
 # ── API: 完整日报 ──
 @app.route('/api/daily_report')
+@login_required
 def api_daily_report():
     from flask import current_app
     with current_app.test_client() as client:

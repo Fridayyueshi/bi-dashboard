@@ -94,12 +94,71 @@
       color: var(--text-muted);
     }
 
-    /* ── 主容器 ── */
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 20px;
+    /* ── 主布局 ── */
+    .layout {
+      display: flex;
+      min-height: calc(100vh - 57px);
     }
+
+    /* ── 侧边导航 ── */
+    .sidebar {
+      width: 180px;
+      flex-shrink: 0;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      padding: 12px 0;
+      position: sticky;
+      top: 57px;
+      height: calc(100vh - 57px);
+      overflow-y: auto;
+      z-index: 50;
+    }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .nav-section {
+      padding: 8px 16px 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+      border-left: 3px solid transparent;
+      text-decoration: none;
+    }
+    .nav-item:hover {
+      color: var(--text-primary);
+      background: rgba(255,255,255,0.03);
+    }
+    .nav-item.active {
+      color: var(--accent-orange);
+      background: rgba(245,158,11,0.08);
+      border-left-color: var(--accent-orange);
+    }
+    .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    /* ── 主容器 ── */
+    .main-content {
+      flex: 1;
+      min-width: 0;
+      padding: 20px;
+      max-width: 1400px;
+    }
+
+    /* ── 页面切换 ── */
+    .page { display: none; }
+    .page.active { display: block; }
 
     /* ── KPI 卡片行 ── */
     .kpi-row {
@@ -480,23 +539,96 @@
       border-top: 1px solid var(--border);
       margin-top: 20px;
     }
+
+    /* ── 登录页面 ── */
+    .login-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--bg-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .login-overlay.hidden { display: none; }
+
+    .login-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      width: 380px;
+      text-align: center;
+    }
+    .login-box h1 {
+      font-size: 24px;
+      color: var(--accent-orange);
+      margin-bottom: 6px;
+    }
+    .login-box p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+    .login-box input {
+      width: 100%;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .login-box input:focus {
+      border-color: var(--accent-orange);
+    }
+    .login-box button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent-orange);
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .login-box button:hover { background: #d97706; }
+    .login-box button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .login-error {
+      color: var(--accent-red);
+      font-size: 13px;
+      margin-top: 10px;
+      min-height: 20px;
+    }
   </style>
 </head>
 <body>
 
+<!-- ── 登录遮罩层 ── -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h1>🏪 店铺 BI 看板</h1>
+    <p>请登录以继续</p>
+    <input type="text" id="loginUser" placeholder="用户名" autocomplete="username" onkeydown="if(event.key==='Enter') doLogin()">
+    <input type="password" id="loginPass" placeholder="密码" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
+    <button id="loginBtn" onclick="doLogin()">登 录</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
 <!-- ── 顶部 ── -->
 <div class="header">
   <div class="header-left">
-    <div class="logo">🏪 南巢 BI 看板</div>
-    <div class="date-range">
-      📅 <span id="dateRange">加载中...</span>
-      <select id="timeRange" onchange="changeTimeRange(this.value)" style="margin-left:8px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:12px;cursor:pointer">
-        <option value="yesterday">昨天</option>
-        <option value="7" selected>近7天</option>
-        <option value="15">近15天</option>
-        <option value="30">近30天</option>
-      </select>
-    </div>
+    <div class="logo">🏪 店铺 BI 看板</div>
+    <span style="font-size:13px;color:var(--text-secondary);margin-left:16px">店铺</span>
+    <select id="storeSelector" onchange="changeStore(this.value)" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;cursor:pointer;min-width:200px">
+      <option value="nanchao_tmall">南巢家具旗舰店-天猫</option>
+    </select>
   </div>
   <div class="header-right">
     <span class="last-update" id="lastUpdate"></span>
@@ -506,7 +638,62 @@
 
 <div class="container">
 
-  <!-- ═══ 店铺数据概况 ═══ -->
+  <!-- ── 主布局：侧边栏 + 内容 ── -->
+  <div class="layout">
+
+    <!-- ═══ 左侧导航 ═══ -->
+    <div class="sidebar">
+      <div class="nav-section">导航菜单</div>
+
+      <a class="nav-item" href="#shishidata" onclick="switchPage('shishidata')">
+        <span class="nav-icon">⚡</span> 实时数据
+      </a>
+      <a class="nav-item active" href="#jingyingzonglan" onclick="switchPage('jingyingzonglan')">
+        <span class="nav-icon">📊</span> 经营总览
+      </a>
+      <a class="nav-item" href="#jingyingshuju" onclick="switchPage('jingyingshuju')">
+        <span class="nav-icon">📈</span> 经营数据
+      </a>
+      <a class="nav-item" href="#shangpinshuju" onclick="switchPage('shangpinshuju')">
+        <span class="nav-icon">📦</span> 商品数据
+      </a>
+      <a class="nav-item" href="#shangpinliebiao" onclick="switchPage('shangpinliebiao')">
+        <span class="nav-icon">📋</span> 商品列表
+      </a>
+      <a class="nav-item" href="#tuiguangshuju" onclick="switchPage('tuiguangshuju')">
+        <span class="nav-icon">📢</span> 推广数据
+      </a>
+      <a class="nav-item" href="#jiaoyishuju" onclick="switchPage('jiaoyishuju')">
+        <span class="nav-icon">🛒</span> 交易数据
+      </a>
+      <a class="nav-item" href="#shouhoushuju" onclick="switchPage('shouhoushuju')">
+        <span class="nav-icon">🔄</span> 售后数据
+      </a>
+      <a class="nav-item" href="#caiwushuju" onclick="switchPage('caiwushuju')">
+        <span class="nav-icon">💰</span> 财务数据
+      </a>
+      <a class="nav-item" href="#xitongshezhi" onclick="switchPage('xitongshezhi')">
+        <span class="nav-icon">⚙️</span> 系统设置
+      </a>
+    </div>
+
+    <!-- ═══ 主内容区域 ═══ -->
+    <div class="main-content">
+
+      <!-- ─── 经营总览（首页） ─── -->
+      <div id="page-jingyingzonglan" class="page active">
+
+      <div class="date-range" style="margin-bottom:16px;display:inline-flex">
+        📅 <span id="dateRange" style="margin-right:8px">加载中...</span>
+        <select id="timeRange" onchange="changeTimeRange(this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:12px;cursor:pointer">
+          <option value="yesterday">昨天</option>
+          <option value="7" selected>近7天</option>
+          <option value="15">近15天</option>
+          <option value="30">近30天</option>
+        </select>
+      </div>
+
+      <!-- ═══ 店铺数据概况 ═══ -->
   <div class="section-title">📊 店铺数据概况</div>
 
   <!-- 成交与流量（4列） -->
@@ -728,7 +915,50 @@
     </div>
   </div>
 
-</div>
+    </div>  <!-- /page-jingyingzonglan -->
+
+    <!-- ─── 其他功能页面（占位） ─── -->
+    <div id="page-shishidata" class="page">
+      <div class="section-title">⚡ 实时数据</div>
+      <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">实时数据模块开发中...</div></div>
+    </div>
+    <div id="page-jingyingshuju" class="page">
+      <div class="section-title">📈 经营数据</div>
+      <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">经营数据模块开发中...</div></div>
+    </div>
+    <div id="page-shangpinshuju" class="page">
+      <div class="section-title">📦 商品数据</div>
+      <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">商品数据模块开发中...</div></div>
+    </div>
+    <div id="page-shangpinliebiao" class="page">
+      <div class="section-title">📋 商品列表</div>
+      <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">商品列表模块开发中...</div></div>
+    </div>
+    <div id="page-tuiguangshuju" class="page">
+      <div class="section-title">📢 推广数据</div>
+      <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">推广数据模块开发中...</div></div>
+    </div>
+    <div id="page-jiaoyishuju" class="page">
+      <div class="section-title">🛒 交易数据</div>
+      <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">交易数据模块开发中...</div></div>
+    </div>
+    <div id="page-shouhoushuju" class="page">
+      <div class="section-title">🔄 售后数据</div>
+      <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">售后数据模块开发中...</div></div>
+    </div>
+    <div id="page-caiwushuju" class="page">
+      <div class="section-title">💰 财务数据</div>
+      <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">财务数据模块开发中...</div></div>
+    </div>
+    <div id="page-xitongshezhi" class="page">
+      <div class="section-title">⚙️ 系统设置</div>
+      <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">系统设置模块开发中...</div></div>
+    </div>
+
+  </div>  <!-- /main-content -->
+</div>  <!-- /layout -->
+
+</div>  <!-- /container -->
 
 <div class="footer">
   🏪 南巢店铺 BI 看板 | <span id="footerTime"></span> | 数据来源: 生意参谋 + 无界
@@ -742,6 +972,14 @@ function fmt(n) {
 
 function fmtMoney(n) {
   return '¥' + (n || 0).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+}
+
+// ── 店铺切换 ──
+let currentStore = 'nanchao_tmall';
+
+function changeStore(val) {
+  currentStore = val;
+  loadAll();
 }
 
 function trendClass(pct) {
@@ -762,7 +1000,7 @@ function trendText(pct) {
 async function loadShopOverview() {
   try {
     const days = document.getElementById('timeRange').value;
-    const res = await fetch('/api/shop_overview?days=' + days);
+    const res = await fetch('/api/shop_overview?store=' + currentStore + '&days=' + days);
     const d = await res.json();
 
     // 成交与流量
@@ -795,7 +1033,7 @@ async function loadShopOverview() {
 // ── 加载 KPI（旧版兼容） ──
 async function loadKPI() {
   try {
-    const res = await fetch('/api/kpi');
+    const res = await fetch('/api/kpi?store=' + currentStore);
     const d = await res.json();
     document.getElementById('kpiAmount').textContent = fmtMoney(d.payment_amount);
     document.getElementById('kpiItems').textContent = fmt(d.payment_items);
@@ -818,7 +1056,7 @@ async function loadKPI() {
 async function loadTrend() {
   try {
     const days = document.getElementById('timeRange').value;
-    const res = await fetch('/api/trend?days=' + days);
+    const res = await fetch('/api/trend?store=' + currentStore + '&days=' + days);
     const d = await res.json();
     const container = document.getElementById('trendChart');
     const max = Math.max(...d.net_amounts.map(v => Math.abs(v)), 1);
@@ -845,7 +1083,7 @@ async function loadAdTrend() {
   try {
     const days = document.getElementById('timeRange').value;
     const scene = document.getElementById('adSceneFilter').value;
-    const url = scene ? `/api/ad_trend?days=${days}&scene=${encodeURIComponent(scene)}` : `/api/ad_trend?days=${days}`;
+    const url = scene ? `/api/ad_trend?store=${currentStore}&days=${days}&scene=${encodeURIComponent(scene)}` : `/api/ad_trend?store=${currentStore}&days=${days}`;
     const res = await fetch(url);
     const d = await res.json();
     const container = document.getElementById('adTrendChart');
@@ -916,7 +1154,7 @@ function formatDateRange(val) {
 // ── 加载竞品监控 ──
 async function loadCompetitor() {
   try {
-    const res = await fetch('/api/competitor');
+    const res = await fetch('/api/competitor?store=' + currentStore);
     const data = await res.json();
     const container = document.getElementById('competitorTable');
 
@@ -945,7 +1183,7 @@ async function loadCompetitor() {
 // ── 加载商品TOP5 ──
 async function loadProductTop() {
   try {
-    const res = await fetch('/api/product_top');
+    const res = await fetch('/api/product_top?store=' + currentStore);
     const data = await res.json();
     const container = document.getElementById('productTopTable');
 
@@ -979,7 +1217,7 @@ async function loadProductTop() {
 // ── 加载流量来源 ──
 async function loadTraffic() {
   try {
-    const res = await fetch('/api/traffic');
+    const res = await fetch('/api/traffic?store=' + currentStore);
     const data = await res.json();
     const container = document.getElementById('trafficTable');
 
@@ -1015,7 +1253,7 @@ async function loadTraffic() {
 // ── 加载关键词 ──
 async function loadKeywords() {
   try {
-    const res = await fetch('/api/keywords');
+    const res = await fetch('/api/keywords?store=' + currentStore);
     const data = await res.json();
     const container = document.getElementById('keywordsTable');
 
@@ -1046,7 +1284,7 @@ async function loadKeywords() {
 // ── 加载报表概览 ──
 async function loadReports() {
   try {
-    const res = await fetch('/api/reports');
+    const res = await fetch('/api/reports?store=' + currentStore);
     const data = await res.json();
     const container = document.getElementById('reportsGrid');
 
@@ -1070,6 +1308,71 @@ async function loadReports() {
   } catch(e) {
     console.error('报表概览加载失败:', e);
   }
+}
+
+// ── 登录 ──
+async function checkSession() {
+  try {
+    const res = await fetch('/api/check_session', { credentials: 'include' });
+    if (res.ok) {
+      document.getElementById('loginOverlay').classList.add('hidden');
+      initDashboard();
+    } else {
+      document.getElementById('loginOverlay').classList.remove('hidden');
+    }
+  } catch(e) {
+    document.getElementById('loginOverlay').classList.remove('hidden');
+  }
+}
+
+async function doLogin() {
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const btn = document.getElementById('loginBtn');
+  const errDiv = document.getElementById('loginError');
+
+  if (!user || !pass) { errDiv.textContent = '请输入用户名和密码'; return; }
+
+  btn.disabled = true;
+  btn.textContent = '登录中...';
+  errDiv.textContent = '';
+
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ username: user, password: pass })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('loginOverlay').classList.add('hidden');
+      initDashboard();
+    } else {
+      errDiv.textContent = data.error || '登录失败';
+      btn.disabled = false;
+      btn.textContent = '登 录';
+    }
+  } catch(e) {
+    errDiv.textContent = '网络错误，请重试';
+    btn.disabled = false;
+    btn.textContent = '登 录';
+  }
+}
+
+// ── 页面切换 ──
+function switchPage(name) {
+  // 隐藏所有页面
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  // 显示目标页面
+  const target = document.getElementById('page-' + name);
+  if (target) target.classList.add('active');
+  // 更新导航高亮
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const nav = document.querySelector(`.nav-item[href="#${name}"]`);
+  if (nav) nav.classList.add('active');
+  // 如果是经营总览，加载数据
+  if (name === 'jingyingzonglan') loadAll();
 }
 
 // ── 加载全部 ──
@@ -1109,8 +1412,18 @@ async function loadAll() {
   btn.textContent = '🔄 刷新数据';
 }
 
-// ── 初始化 ──
-loadAll();
+// ── 初始化仪表盘（登录后调用） ──
+function initDashboard() {
+  const hash = location.hash.replace('#', '') || 'jingyingzonglan';
+  if (hash) {
+    switchPage(hash);
+  } else {
+    loadAll();
+  }
+}
+
+// ── 启动：先检查登录状态 ──
+checkSession();
 </script>
 
 </body>
