@@ -546,6 +546,163 @@
     .kpi-card:nth-child(3) { animation-delay: 0.15s; }
     .kpi-card:nth-child(4) { animation-delay: 0.2s; }
 
+    /* ── 商品数据表 ── */
+    .prod-table-wrap {
+      overflow-x: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .prod-table-wrap .data-table th,
+    .prod-table-wrap .data-table td {
+      white-space: nowrap;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+    .prod-table-wrap .data-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .prod-table-wrap .data-table td { color: var(--text-primary); }
+    .prod-thumb-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .prod-thumb {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 4px;
+      display: block;
+      cursor: zoom-in;
+    }
+    .prod-thumb-zoom {
+      position: absolute;
+      top: -10px;
+      left: 50px;
+      width: 200px;
+      height: 200px;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 2px solid var(--border);
+      background: var(--bg-card);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+      pointer-events: none;
+    }
+    .prod-thumb-wrap:hover .prod-thumb-zoom { display: block; }
+    .prod-title-cell {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .cost-ratio-highlight {
+      background: rgba(239, 68, 68, 0.12) !important;
+    }
+    .cost-ratio-highlight:hover td {
+      background: rgba(239, 68, 68, 0.18) !important;
+    }
+    .pd-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 0;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .pd-pagination .page-btn {
+      min-width: 32px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .pd-pagination .page-btn:hover {
+      border-color: var(--accent-orange);
+      color: var(--accent-orange);
+      background: rgba(245,158,11,0.08);
+    }
+    .pd-pagination .page-btn.active {
+      background: var(--accent-orange);
+      border-color: var(--accent-orange);
+      color: white;
+    }
+    .pd-pagination .page-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .pd-pagination .page-info {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin: 0 8px;
+    }
+
+    .sortable-header {
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.15s;
+    }
+    .sortable-header:hover { color: var(--accent-orange); }
+    .sort-arrow {
+      display: inline-block;
+      margin-left: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      transition: color 0.15s;
+    }
+    .sort-arrow.active { color: var(--accent-orange); }
+    .money-col { text-align: right; font-variant-numeric: tabular-nums; }
+    .prod-table-loading {
+      text-align: center;
+      padding: 60px;
+      color: var(--text-muted);
+    }
+
+    /* ── 自定义日期选择 ── */
+    .pd-date-picker {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-left: 8px;
+    }
+    .pd-date-picker.show { display: inline-flex; }
+    .pd-date-picker input[type="date"] {
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .pd-date-picker input[type="date"]:focus {
+      outline: none;
+      border-color: var(--accent-orange);
+    }
+    .pd-date-picker .confirm-btn {
+      background: var(--accent-orange);
+      color: white;
+      border: none;
+      padding: 4px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .pd-date-picker .confirm-btn:hover { background: #d97706; }
+
     /* ── 页脚 ── */
     .footer {
       text-align: center;
@@ -567,6 +724,99 @@
       z-index: 9999;
     }
     .login-overlay.hidden { display: none; }
+
+    /* ── AI分析悬浮窗 ── */
+    .ai-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9998;
+    }
+    .ai-modal-overlay.hidden { display: none; }
+    .ai-modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 640px;
+      max-width: 90vw;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .ai-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .ai-modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .ai-modal-close:hover {
+      background: var(--bg-dark);
+      color: var(--text-primary);
+    }
+    .ai-modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+    }
+    .ai-modal-body.loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .ai-modal-body.error {
+      color: var(--accent-red);
+    }
+    .ai-modal-body h1,
+    .ai-modal-body h2,
+    .ai-modal-body h3 {
+      margin: 16px 0 8px;
+      font-weight: 600;
+    }
+    .ai-modal-body h2 { font-size: 16px; color: var(--accent-orange); }
+    .ai-modal-body h3 { font-size: 14px; }
+    .ai-modal-body ul { padding-left: 20px; margin: 6px 0; }
+    .ai-modal-body li { margin: 3px 0; }
+    .ai-modal-body strong { color: var(--accent-orange); }
+    .ai-btn {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      border: none;
+      padding: 6px 18px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .ai-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .ai-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
     .login-box {
       background: var(--bg-card);
@@ -624,6 +874,19 @@
   </style>
 </head>
 <body>
+
+<!-- ── AI分析悬浮窗 ── -->
+<div class="ai-modal-overlay hidden" id="aiModal">
+  <div class="ai-modal-box">
+    <div class="ai-modal-header">
+      <span>🤖 AI 商品数据分析</span>
+      <button class="ai-modal-close" onclick="closeAiModal()">✕</button>
+    </div>
+    <div class="ai-modal-body" id="aiModalBody">
+      <div class="loading">⏳ AI正在分析数据，请稍候...</div>
+    </div>
+  </div>
+</div>
 
 <!-- ── 登录遮罩层 ── -->
 <div class="login-overlay" id="loginOverlay">
@@ -953,7 +1216,56 @@
     </div>
     <div id="page-tuiguangshuju" class="page">
       <div class="section-title">📢 推广数据</div>
-      <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">推广数据模块开发中...</div></div>
+
+      <div class="date-range" style="margin-bottom:16px;display:inline-flex;flex-wrap:wrap;align-items:center">
+        📅 <span style="margin-right:8px">时间周期</span>
+        <select id="pdTimeRange" onchange="onPdTimeChange(this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:12px;cursor:pointer">
+          <option value="yesterday">昨天</option>
+          <option value="7" selected>近7天</option>
+          <option value="15">近15天</option>
+          <option value="30">近30天</option>
+          <option value="custom">自定义</option>
+        </select>
+        <div class="pd-date-picker" id="pdDatePicker">
+          <input type="date" id="pdDateFrom">
+          <span style="color:var(--text-muted);font-size:12px">至</span>
+          <input type="date" id="pdDateTo">
+          <button class="confirm-btn" onclick="loadProductData()">确定</button>
+        </div>
+        <button class="ai-btn" id="pdAiBtn" onclick="pdAiAnalyze()">🤖 AI分析</button>
+      </div>
+
+      <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <input type="text" id="pdSearchInput" placeholder="搜索商品ID..." onkeydown="if(event.key==='Enter') pdSearch()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:180px;font-family:monospace">
+        <input type="text" id="pdSearchModelInput" placeholder="搜索商品型号..." onkeydown="if(event.key==='Enter') pdSearch()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:180px">
+        <button class="confirm-btn" onclick="pdSearch()" style="padding:6px 16px">搜索</button>
+        <button onclick="pdClearSearch()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">清除</button>
+      </div>
+
+      <div class="prod-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>商品ID</th>
+              <th>商品状态</th>
+              <th>商品标题</th>
+              <th>商品型号</th>
+              <th>商品图片</th>
+              <th class="money-col sortable-header" onclick="pdSortBy('gmv')">总GMV<span class="sort-arrow" id="pdArrowGmv">↕</span></th>
+              <th class="money-col sortable-header" onclick="pdSortBy('refund')">退款金额<span class="sort-arrow" id="pdArrowRefund">↕</span></th>
+              <th class="money-col sortable-header" onclick="pdSortBy('net_gmv')">去退GMV<span class="sort-arrow" id="pdArrowNet">↕</span></th>
+              <th class="money-col sortable-header" onclick="pdSortBy('ad_cost')">广告投入<span class="sort-arrow" id="pdArrowAd">↕</span></th>
+              <th class="money-col sortable-header" onclick="pdSortBy('seed_cost')">种菜投入<span class="sort-arrow" id="pdArrowSeed">↕</span></th>
+              <th class="money-col sortable-header" onclick="pdSortBy('total_cost')">商品总投入<span class="sort-arrow" id="pdArrowTotal">↕</span></th>
+              <th>费比</th>
+            </tr>
+          </thead>
+          <tbody id="pdTableBody">
+            <tr><td colspan="12" class="prod-table-loading">加载中...</td></tr>
+          </tbody>
+        </table>
+      <div class="pd-pagination" id="pdPagination"></div>
+      </div>
     </div>
     <div id="page-jiaoyishuju" class="page">
       <div class="section-title">🛒 交易数据</div>
@@ -1386,6 +1698,303 @@ async function doLogout() {
   document.getElementById('loginOverlay').classList.remove('hidden');
 }
 
+// ── 商品数据（独立模块，分页10条/页） ──
+let pdData = [];          // 完整数据
+let pdPage = 1;           // 当前页
+let pdSortField = '';     // 当前排序字段
+let pdSortDir = 'none';   // none / desc / asc
+let pdSearchQuery = '';   // 商品ID搜索关键词
+let pdSearchModel = '';   // 商品型号搜索关键词
+const PD_PAGE_SIZE = 10;  // 每页条数
+
+function pdSortBy(field) {
+  const arrows = ['↕', '↑', '↓'];
+  const arrowMap = {
+    gmv: 'pdArrowGmv', refund: 'pdArrowRefund', net_gmv: 'pdArrowNet',
+    ad_cost: 'pdArrowAd', seed_cost: 'pdArrowSeed', total_cost: 'pdArrowTotal'
+  };
+
+  // 清除所有箭头高亮
+  Object.values(arrowMap).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = '↕'; el.className = 'sort-arrow'; }
+  });
+
+  // 切换排序状态
+  if (pdSortField !== field) {
+    pdSortField = field;
+    pdSortDir = 'desc';
+  } else {
+    if (pdSortDir === 'desc') pdSortDir = 'asc';
+    else { pdSortDir = 'none'; pdSortField = ''; }
+  }
+
+  // 更新当前箭头
+  if (pdSortDir !== 'none') {
+    const el = document.getElementById(arrowMap[field]);
+    if (el) {
+      el.textContent = arrows[pdSortDir === 'desc' ? 1 : 2];
+      el.className = 'sort-arrow active';
+    }
+    pdData.sort((a, b) => pdSortDir === 'desc' ? b[field] - a[field] : a[field] - b[field]);
+  } else {
+    // 恢复默认（按商品ID）
+    pdData.sort((a, b) => (a.prod_id || '').localeCompare(b.prod_id || ''));
+  }
+  pdPage = 1;
+  renderPdTable();
+}
+
+function onPdTimeChange(val) {
+  const picker = document.getElementById('pdDatePicker');
+  if (val === 'custom') {
+    picker.classList.add('show');
+    if (!document.getElementById('pdDateFrom').value) {
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 6);
+      document.getElementById('pdDateFrom').value = weekAgo.toISOString().slice(0,10);
+      document.getElementById('pdDateTo').value = today.toISOString().slice(0,10);
+    }
+  } else {
+    picker.classList.remove('show');
+    pdPage = 1;
+    loadProductData();
+  }
+}
+
+function pdSearch() {
+  pdSearchQuery = document.getElementById('pdSearchInput').value.trim();
+  pdSearchModel = document.getElementById('pdSearchModelInput').value.trim();
+  pdPage = 1;
+  // 搜索时重置排序
+  pdSortField = '';
+  pdSortDir = 'none';
+  document.querySelectorAll('.sort-arrow').forEach(el => {
+    el.textContent = '↕';
+    el.className = 'sort-arrow';
+  });
+  renderPdTable();
+}
+
+function pdClearSearch() {
+  document.getElementById('pdSearchInput').value = '';
+  document.getElementById('pdSearchModelInput').value = '';
+  pdSearchQuery = '';
+  pdSearchModel = '';
+  pdPage = 1;
+  renderPdTable();
+}
+
+function renderPdTable() {
+  const tbody = document.getElementById('pdTableBody');
+  const pagination = document.getElementById('pdPagination');
+  if (!tbody) return;
+
+  // 搜索过滤（商品ID + 商品型号双条件模糊搜索）
+  let filtered = pdData;
+  if (pdSearchQuery) {
+    filtered = filtered.filter(p => p.prod_id && p.prod_id.includes(pdSearchQuery));
+  }
+  if (pdSearchModel) {
+    filtered = filtered.filter(p => p.model && p.model.includes(pdSearchModel));
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PD_PAGE_SIZE));
+  if (pdPage > totalPages) pdPage = totalPages;
+
+  const start = (pdPage - 1) * PD_PAGE_SIZE;
+  const pageData = filtered.slice(start, start + PD_PAGE_SIZE);
+
+  // 表格行
+  tbody.innerHTML = pageData.length
+    ? pageData.map(p => {
+        const imgHtml = p.image
+      ? `<div class="prod-thumb-wrap"><img class="prod-thumb" src="${p.image}" alt="" onerror="this.style.display='none'" loading="lazy"><img class="prod-thumb-zoom" src="${p.image}" alt=""></div>`
+      : '<span style="color:var(--text-muted);font-size:11px">无图片</span>';
+
+    const rowClass = p.cost_ratio > 15 ? ' class="cost-ratio-highlight"' : '';
+
+    return `<tr${rowClass}>
+      <td style="font-family:monospace;font-size:11px">${p.prod_id || '-'}</td>
+      <td>${p.status || '-'}</td>
+      <td><div class="prod-title-cell" title="${(p.title || '').replace(/"/g,'&quot;')}">${p.title || '-'}</div></td>
+      <td style="font-family:monospace;font-size:11px">${p.model || '-'}</td>
+      <td>${imgHtml}</td>
+      <td class="money-col">${fmtMoney(p.gmv)}</td>
+      <td class="money-col">${fmtMoney(p.refund)}</td>
+      <td class="money-col" style="font-weight:600">${fmtMoney(p.net_gmv)}</td>
+      <td class="money-col">${fmtMoney(p.ad_cost)}</td>
+      <td class="money-col" title="种菜订单 ${p.seed_count} 笔 × ¥8">${fmtMoney(p.seed_cost)}</td>
+      <td class="money-col" style="font-weight:600">${fmtMoney(p.total_cost)}</td>
+      <td style="text-align:center">${p.cost_ratio.toFixed(2)}%</td>
+    </tr>`;
+  }).join('')
+    : '<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--text-muted)">无匹配结果</td></tr>';
+
+  // 分页导航
+  if (totalPages <= 1) {
+    pagination.innerHTML = '';
+    return;
+  }
+
+  let html = '';
+  // 上一页
+  html += `<button class="page-btn" onclick="pdPage--;renderPdTable()" ${pdPage <= 1 ? 'disabled' : ''}>‹</button>`;
+
+  // 页码
+  let startPage = Math.max(1, pdPage - 2);
+  let endPage = Math.min(totalPages, startPage + 4);
+  if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+  if (startPage > 1) {
+    html += `<button class="page-btn" onclick="pdPage=1;renderPdTable()">1</button>`;
+    if (startPage > 2) html += `<span class="page-info">…</span>`;
+  }
+  for (let i = startPage; i <= endPage; i++) {
+    html += `<button class="page-btn${i === pdPage ? ' active' : ''}" onclick="pdPage=${i};renderPdTable()">${i}</button>`;
+  }
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) html += `<span class="page-info">…</span>`;
+    html += `<button class="page-btn" onclick="pdPage=${totalPages};renderPdTable()">${totalPages}</button>`;
+  }
+
+  // 下一页
+  html += `<button class="page-btn" onclick="pdPage++;renderPdTable()" ${pdPage >= totalPages ? 'disabled' : ''}>›</button>`;
+
+  // 总数
+  html += `<span class="page-info">共 ${filtered.length} 条</span>`;
+
+  pagination.innerHTML = html;
+}
+
+async function loadProductData() {
+  const tbody = document.getElementById('pdTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="12" class="prod-table-loading">加载中...</td></tr>';
+  document.getElementById('pdPagination').innerHTML = '';
+
+  try {
+    const sel = document.getElementById('pdTimeRange');
+    const val = sel.value;
+    let url = '/api/product_data?store=' + currentStore;
+
+    if (val === 'custom') {
+      const dateFrom = document.getElementById('pdDateFrom').value;
+      const dateTo = document.getElementById('pdDateTo').value;
+      if (!dateFrom || !dateTo) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--accent-red)">请选择开始日期和结束日期</td></tr>';
+        return;
+      }
+      if (dateFrom > dateTo) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--accent-red)">开始日期不能晚于结束日期</td></tr>';
+        return;
+      }
+      url += '&date_from=' + dateFrom + '&date_to=' + dateTo;
+    } else {
+      url += '&days=' + val;
+    }
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    pdData = await res.json();
+    pdPage = 1;
+    pdSearchQuery = '';
+    pdSearchModel = '';
+    pdSortField = '';
+    pdSortDir = 'none';
+    document.getElementById('pdSearchInput').value = '';
+    document.getElementById('pdSearchModelInput').value = '';
+    document.querySelectorAll('.sort-arrow').forEach(el => {
+      el.textContent = '↕'; el.className = 'sort-arrow';
+    });
+
+    if (!pdData.length) {
+      tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--text-muted)">暂无数据</td></tr>';
+      return;
+    }
+
+    renderPdTable();
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--accent-red)">加载失败: ' + e.message + '</td></tr>';
+  }
+}
+
+// ── AI 分析（商品数据） ──
+function closeAiModal() {
+  document.getElementById('aiModal').classList.add('hidden');
+}
+
+async function pdAiAnalyze() {
+  if (!pdData || pdData.length === 0) {
+    alert('暂无商品数据，请先加载数据');
+    return;
+  }
+
+  const btn = document.getElementById('pdAiBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 分析中...';
+
+  // 获取时间标签
+  const sel = document.getElementById('pdTimeRange');
+  const val = sel.value;
+  let timeLabel = '';
+  if (val === 'custom') {
+    const f = document.getElementById('pdDateFrom').value;
+    const t = document.getElementById('pdDateTo').value;
+    timeLabel = (f && t) ? `${f} ~ ${t}` : '自定义周期';
+  } else if (val === 'yesterday') {
+    timeLabel = '昨天';
+  } else {
+    timeLabel = `近${val}天`;
+  }
+
+  // 显示悬浮窗（加载中状态）
+  const modal = document.getElementById('aiModal');
+  const body = document.getElementById('aiModalBody');
+  body.className = 'ai-modal-body loading';
+  body.textContent = '';
+  body.innerHTML = '<div class="loading">⏳ AI正在分析数据，请稍候...</div>';
+  modal.classList.remove('hidden');
+
+  try {
+    const res = await fetch('/api/ai_analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        products: pdData,
+        time_label: timeLabel,
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `HTTP ${res.status}`);
+    }
+
+    const result = await res.json();
+
+    // 将markdown渲染为HTML（简单转换）
+    let html = result.analysis
+      .replace(/### (.+)/g, '<h3>$1</h3>')
+      .replace(/## (.+)/g, '<h2>$1</h2>')
+      .replace(/# (.+)/g, '<h1>$1</h1>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^\* (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+      .replace(/\n/g, '<br>');
+
+    body.className = 'ai-modal-body';
+    body.innerHTML = html;
+  } catch (e) {
+    body.className = 'ai-modal-body error';
+    body.innerHTML = `❌ ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🤖 AI分析';
+  }
+}
+
 // ── 页面切换 ──
 function switchPage(name) {
   // 隐藏所有页面
@@ -1399,6 +2008,7 @@ function switchPage(name) {
   if (nav) nav.classList.add('active');
   // 如果是经营总览，加载数据
   if (name === 'jingyingzonglan') loadAll();
+  if (name === 'shangpinshuju' || name === 'tuiguangshuju') loadProductData();
 }
 
 // ── 加载全部 ──

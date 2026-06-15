@@ -22,6 +22,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, jsonify, request, session, send_from_directory
 from flask_cors import CORS
+import requests
 import psycopg2
 import psycopg2.extras
 
@@ -509,6 +510,165 @@ def api_daily_report():
         "reports": reports,
         "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     })
+
+# ── API: 商品数据（独立模块，不影响其他页面） ──
+@app.route('/api/product_data')
+@login_required
+def api_product_data():
+    days_param = request.args.get('days', '7')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+
+    # 自定义日期区间优先
+    if date_from and date_to:
+        date_filter_o = f"\"订单付款时间\" >= '{date_from}'::date AND \"订单付款时间\" < ('{date_to}'::date + INTERVAL '1 day')"
+        date_filter_a = f"\"日期\" >= '{date_from}'::date AND \"日期\" < ('{date_to}'::date + INTERVAL '1 day')"
+    elif days_param == 'yesterday':
+        date_filter_o = "\"订单付款时间\" >= (CURRENT_DATE - INTERVAL '1 day')::date AND \"订单付款时间\" < CURRENT_DATE::date"
+        date_filter_a = "\"日期\" = CURRENT_DATE - INTERVAL '1 day'"
+    else:
+        days = int(days_param)
+        date_filter_o = f"\"订单付款时间\" >= (CURRENT_DATE - INTERVAL '{days} days')::date"
+        date_filter_a = f"\"日期\" >= CURRENT_DATE - INTERVAL '{days} days'"
+
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # 1. 所有商品基础信息
+    cur.execute('''
+        SELECT DISTINCT "商品ID", "商品状态", "商品名称", "商家编码", "商品图片"
+        FROM products ORDER BY "商品ID"
+    ''')
+    products = cur.fetchall()
+    if not products:
+        cur.close(); conn.close()
+        return jsonify([])
+
+    # 2. 订单聚合（总GMV、退款金额、种菜订单数）
+    cur.execute(f'''
+        SELECT "商品ID",
+               COALESCE(SUM(CASE WHEN "买家实付金额" > 1000 THEN "买家实付金额" ELSE 0 END), 0) AS total_gmv,
+               COALESCE(SUM(CASE WHEN "退款状态" = \'退款成功\' THEN CAST("退款金额" AS NUMERIC) ELSE 0 END), 0) AS total_refund,
+               COALESCE(COUNT(CASE WHEN "买家实付金额" > 0 AND "买家实付金额" <= 1000 THEN 1 END), 0) AS seed_count
+        FROM orders
+        WHERE {date_filter_o}
+        GROUP BY "商品ID"
+    ''')
+    order_map = {r['商品ID']: r for r in cur.fetchall()}
+
+    # 3. 广告花费聚合
+    cur.execute(f'''
+        SELECT "主体id",
+               COALESCE(SUM("花费"), 0) AS total_ad
+        FROM wj_spbb_spandjh
+        WHERE {date_filter_a}
+        GROUP BY "主体id"
+    ''')
+    ad_map = {str(r['主体id']): r for r in cur.fetchall()}
+
+    cur.close(); conn.close()
+
+    result = []
+    for p in products:
+        pid = p['商品ID']
+        oa = order_map.get(pid, {})
+        aa = ad_map.get(pid, {})
+
+        gmv = float(oa.get('total_gmv', 0) or 0)
+        refund = float(oa.get('total_refund', 0) or 0)
+        net_gmv = gmv - refund
+        seed_count = int(oa.get('seed_count', 0) or 0)
+        seed_cost = seed_count * 8
+        ad_cost = float(aa.get('total_ad', 0) or 0)
+        total_cost = ad_cost + seed_cost
+        cost_ratio = round(total_cost / (net_gmv if net_gmv > 0 else 1) * 100, 2)
+
+        result.append({
+            "prod_id": pid,
+            "status": p['商品状态'],
+            "title": p['商品名称'],
+            "model": p['商家编码'],
+            "image": p['商品图片'],
+            "gmv": round(gmv, 2),
+            "refund": round(refund, 2),
+            "net_gmv": round(net_gmv, 2),
+            "ad_cost": round(ad_cost, 2),
+            "seed_count": seed_count,
+            "seed_cost": seed_cost,
+            "total_cost": round(total_cost, 2),
+            "cost_ratio": cost_ratio,
+        })
+
+    return jsonify(result)
+
+
+# ── AI 分析 ──
+AI_API_KEY = "sk-cxXAvs9pZLYXBWQj3dHkHtmKSqxwxac4"
+AI_API_URL = "https://token.sensenova.cn/v1/chat/completions"
+AI_MODEL = "deepseek-v4-flash"
+
+@app.route('/api/ai_analyze', methods=['POST'])
+@login_required
+def ai_analyze():
+    """AI分析商品数据"""
+    data = request.get_json(silent=True) or {}
+    products = data.get('products', [])
+    time_label = data.get('time_label', '当前周期')
+
+    if not products:
+        return jsonify({"error": "无数据可分析"}), 400
+
+    # 构建分析提示词
+    prod_lines = []
+    for p in products:
+        prod_lines.append(
+            f"商品ID:{p.get('prod_id','-')} | 标题:{p.get('title','-')} | "
+            f"型号:{p.get('model','-')} | 状态:{p.get('status','-')} | "
+            f"总GMV:¥{p.get('gmv',0):.2f} | 退款:¥{p.get('refund',0):.2f} | "
+            f"去退GMV:¥{p.get('net_gmv',0):.2f} | 广告:¥{p.get('ad_cost',0):.2f} | "
+            f"种菜投入:¥{p.get('seed_cost',0):.2f} | 总投入:¥{p.get('total_cost',0):.2f} | "
+            f"费比:{p.get('cost_ratio',0):.2f}%"
+        )
+
+    prompt = f"""你是一名天猫店铺运营数据分析专家。以下是 {time_label} 的商品数据表格，请进行专业分析。
+
+商品数据（共{len(products)}条）：
+{chr(10).join(prod_lines)}
+
+请从以下几个角度进行分析（使用中文，markdown格式）：
+1. **整体概况**：总体GMV、去退GMV、总投入、平均费比的概况
+2. **盈利/亏损商品**：哪些商品费比过高（>15%），哪些商品表现优秀
+3. **广告投放效率**：广告投入与GMV的比例分析
+4. **种菜投入分析**：种菜成本是否合理
+5. **改进建议**：针对异常商品的具体优化方向
+
+请保持分析简洁精炼，控制在500字以内。"""
+
+    try:
+        resp = requests.post(
+            AI_API_URL,
+            headers={
+                "Authorization": f"Bearer {AI_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": AI_MODEL,
+                "messages": [
+                    {"role": "system", "content": "你是一个专业的天猫店铺运营数据分析助手，回复简洁精炼，使用中文。"},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.7,
+                "max_tokens": 1500,
+            },
+            timeout=60,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        content = result['choices'][0]['message']['content']
+        return jsonify({"analysis": content})
+    except Exception as e:
+        return jsonify({"error": f"AI分析请求失败: {str(e)}"}), 500
+
 
 # ── 启动 ──
 if __name__ == '__main__':
