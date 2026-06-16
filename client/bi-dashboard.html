@@ -169,7 +169,6 @@
       flex: 1;
       min-width: 0;
       padding: 20px;
-      max-width: 1400px;
     }
 
     /* ── 页面切换 ── */
@@ -963,14 +962,21 @@
       <!-- ─── 经营总览（首页） ─── -->
       <div id="page-jingyingzonglan" class="page active">
 
-      <div class="date-range" style="margin-bottom:16px;display:inline-flex">
+      <div class="date-range" style="margin-bottom:16px;display:inline-flex;flex-wrap:wrap;align-items:center">
         📅 <span id="dateRange" style="margin-right:8px">加载中...</span>
         <select id="timeRange" onchange="changeTimeRange(this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:12px;cursor:pointer">
           <option value="yesterday">昨天</option>
           <option value="7" selected>近7天</option>
           <option value="15">近15天</option>
           <option value="30">近30天</option>
+          <option value="custom">自定义</option>
         </select>
+        <div class="pd-date-picker" id="overviewDatePicker">
+          <input type="date" id="overviewDateFrom">
+          <span style="color:var(--text-muted);font-size:12px">至</span>
+          <input type="date" id="overviewDateTo">
+          <button class="confirm-btn" onclick="loadAll()">确定</button>
+        </div>
       </div>
 
       <!-- ═══ 店铺数据概况 ═══ -->
@@ -1152,7 +1158,7 @@
     <!-- 商品排行 -->
     <div class="card">
       <div class="card-header">
-        <div class="card-title">商品支付TOP5</div>
+        <div class="card-title">商品支付TOP10</div>
       </div>
       <div class="card-body" id="productTopTable">
         <div class="loading"><div class="spinner"></div>加载中...</div>
@@ -1215,31 +1221,31 @@
       <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">商品列表模块开发中...</div></div>
     </div>
     <div id="page-tuiguangshuju" class="page">
-      <div class="section-title">📢 推广数据</div>
+      <div class="section-title">📢 推广数据概况</div>
 
       <div class="date-range" style="margin-bottom:16px;display:inline-flex;flex-wrap:wrap;align-items:center">
         📅 <span style="margin-right:8px">时间周期</span>
-        <select id="pdTimeRange" onchange="onPdTimeChange(this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:12px;cursor:pointer">
+        <select id="tgTimeRange" onchange="onTgTimeChange(this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:12px;cursor:pointer">
           <option value="yesterday">昨天</option>
           <option value="7" selected>近7天</option>
           <option value="15">近15天</option>
           <option value="30">近30天</option>
           <option value="custom">自定义</option>
         </select>
-        <div class="pd-date-picker" id="pdDatePicker">
-          <input type="date" id="pdDateFrom">
+        <div class="pd-date-picker" id="tgDatePicker">
+          <input type="date" id="tgDateFrom">
           <span style="color:var(--text-muted);font-size:12px">至</span>
-          <input type="date" id="pdDateTo">
-          <button class="confirm-btn" onclick="loadProductData()">确定</button>
+          <input type="date" id="tgDateTo">
+          <button class="confirm-btn" onclick="tgLoadData()">确定</button>
         </div>
-        <button class="ai-btn" id="pdAiBtn" onclick="pdAiAnalyze()">🤖 AI分析</button>
+        <button class="ai-btn" id="tgAiBtn" onclick="alert('推广数据概况暂不支持AI分析')">🤖 AI分析</button>
       </div>
 
       <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <input type="text" id="pdSearchInput" placeholder="搜索商品ID..." onkeydown="if(event.key==='Enter') pdSearch()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:180px;font-family:monospace">
-        <input type="text" id="pdSearchModelInput" placeholder="搜索商品型号..." onkeydown="if(event.key==='Enter') pdSearch()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:180px">
-        <button class="confirm-btn" onclick="pdSearch()" style="padding:6px 16px">搜索</button>
-        <button onclick="pdClearSearch()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">清除</button>
+        <input type="text" id="tgSearchInput" placeholder="搜索商品ID..." onkeydown="if(event.key==='Enter') tgSearch()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:180px;font-family:monospace">
+        <input type="text" id="tgSearchModelInput" placeholder="搜索商品型号..." onkeydown="if(event.key==='Enter') tgSearch()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:180px">
+        <button class="confirm-btn" onclick="tgSearch()" style="padding:6px 16px">搜索</button>
+        <button onclick="tgClearSearch()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">清除</button>
       </div>
 
       <div class="prod-table-wrap">
@@ -1251,20 +1257,33 @@
               <th>商品标题</th>
               <th>商品型号</th>
               <th>商品图片</th>
-              <th class="money-col sortable-header" onclick="pdSortBy('gmv')">总GMV<span class="sort-arrow" id="pdArrowGmv">↕</span></th>
-              <th class="money-col sortable-header" onclick="pdSortBy('refund')">退款金额<span class="sort-arrow" id="pdArrowRefund">↕</span></th>
-              <th class="money-col sortable-header" onclick="pdSortBy('net_gmv')">去退GMV<span class="sort-arrow" id="pdArrowNet">↕</span></th>
-              <th class="money-col sortable-header" onclick="pdSortBy('ad_cost')">广告投入<span class="sort-arrow" id="pdArrowAd">↕</span></th>
-              <th class="money-col sortable-header" onclick="pdSortBy('seed_cost')">种菜投入<span class="sort-arrow" id="pdArrowSeed">↕</span></th>
-              <th class="money-col sortable-header" onclick="pdSortBy('total_cost')">商品总投入<span class="sort-arrow" id="pdArrowTotal">↕</span></th>
+              <th class="money-col sortable-header" onclick="tgSortBy('gmv')">总GMV<span class="sort-arrow" id="tgArrowGmv">↕</span></th>
+              <th class="money-col sortable-header" onclick="tgSortBy('refund')">退款金额<span class="sort-arrow" id="tgArrowRefund">↕</span></th>
+              <th class="money-col sortable-header" onclick="tgSortBy('net_gmv')">去退GMV<span class="sort-arrow" id="tgArrowNet">↕</span></th>
+              <th class="money-col sortable-header" onclick="tgSortBy('ad_cost')">广告投入<span class="sort-arrow" id="tgArrowAd">↕</span></th>
+              <th class="money-col sortable-header" onclick="tgSortBy('seed_cost')">种菜投入<span class="sort-arrow" id="tgArrowSeed">↕</span></th>
+              <th class="money-col sortable-header" onclick="tgSortBy('total_cost')">商品总投入<span class="sort-arrow" id="tgArrowTotal">↕</span></th>
               <th>费比</th>
+              <th class="money-col sortable-header" onclick="tgSortBy('roi')">ROI<span class="sort-arrow" id="tgArrowRoi">↕</span></th>
+              <th class="money-col sortable-header" onclick="tgSortBy('pay_exposure')">付费曝光量<span class="sort-arrow" id="tgArrowExposure">↕</span></th>
+              <th class="money-col sortable-header" onclick="tgSortBy('pay_visitors')">付费访客数<span class="sort-arrow" id="tgArrowVisitors">↕</span></th>
+              <th>付费点击率</th>
+              <th class="money-col sortable-header" onclick="tgSortBy('pay_direct_cart')">付费直接加购数<span class="sort-arrow" id="tgArrowDcart">↕</span></th>
+              <th>付费直接加购成本</th>
+              <th>付费直接加购率</th>
+              <th class="money-col sortable-header" onclick="tgSortBy('pay_total_cart')">付费总加购数<span class="sort-arrow" id="tgArrowTcart">↕</span></th>
+              <th>付费总加购成本</th>
+              <th>付费总加购率</th>
+              <th class="money-col sortable-header" onclick="tgSortBy('consultations')">咨询量<span class="sort-arrow" id="tgArrowConsult">↕</span></th>
+              <th class="money-col sortable-header" onclick="tgSortBy('pay_orders')">付费支付订单数<span class="sort-arrow" id="tgArrowOrders">↕</span></th>
+              <th>付费支付转化率</th>
             </tr>
           </thead>
-          <tbody id="pdTableBody">
-            <tr><td colspan="12" class="prod-table-loading">加载中...</td></tr>
+          <tbody id="tgTableBody">
+            <tr><td colspan="25" class="prod-table-loading">加载中...</td></tr>
           </tbody>
         </table>
-      <div class="pd-pagination" id="pdPagination"></div>
+      <div class="pd-pagination" id="tgPagination"></div>
       </div>
     </div>
     <div id="page-jiaoyishuju" class="page">
@@ -1329,7 +1348,13 @@ function trendText(pct) {
 async function loadShopOverview() {
   try {
     const days = document.getElementById('timeRange').value;
-    const res = await fetch('/api/shop_overview?store=' + currentStore + '&days=' + days);
+    let url = '/api/shop_overview?store=' + currentStore;
+    if (days === 'custom') {
+      url += '&date_from=' + document.getElementById('overviewDateFrom').value + '&date_to=' + document.getElementById('overviewDateTo').value;
+    } else {
+      url += '&days=' + days;
+    }
+    const res = await fetch(url);
     const d = await res.json();
 
     // 成交与流量
@@ -1385,7 +1410,13 @@ async function loadKPI() {
 async function loadTrend() {
   try {
     const days = document.getElementById('timeRange').value;
-    const res = await fetch('/api/trend?store=' + currentStore + '&days=' + days);
+    let url = '/api/trend?store=' + currentStore;
+    if (days === 'custom') {
+      url += '&date_from=' + document.getElementById('overviewDateFrom').value + '&date_to=' + document.getElementById('overviewDateTo').value;
+    } else {
+      url += '&days=' + days;
+    }
+    const res = await fetch(url);
     const d = await res.json();
     const container = document.getElementById('trendChart');
     const max = Math.max(...d.net_amounts.map(v => Math.abs(v)), 1);
@@ -1411,9 +1442,15 @@ async function loadTrend() {
 async function loadAdTrend() {
   try {
     const days = document.getElementById('timeRange').value;
+    let url = '/api/ad_trend?store=' + currentStore;
+    if (days === 'custom') {
+      url += '&date_from=' + document.getElementById('overviewDateFrom').value + '&date_to=' + document.getElementById('overviewDateTo').value;
+    } else {
+      url += '&days=' + days;
+    }
     const scene = document.getElementById('adSceneFilter').value;
-    const url = scene ? `/api/ad_trend?store=${currentStore}&days=${days}&scene=${encodeURIComponent(scene)}` : `/api/ad_trend?store=${currentStore}&days=${days}`;
-    const res = await fetch(url);
+    const finalUrl = scene ? url + '&scene=' + encodeURIComponent(scene) : url;
+    const res = await fetch(finalUrl);
     const d = await res.json();
     const container = document.getElementById('adTrendChart');
     const legend = document.getElementById('adChartLegend');
@@ -1463,7 +1500,20 @@ async function loadAdTrend() {
 
 // ── 切换时间范围 ──
 function changeTimeRange(val) {
-  loadAll();
+  const picker = document.getElementById('overviewDatePicker');
+  if (val === 'custom') {
+    picker.classList.add('show');
+    if (!document.getElementById('overviewDateFrom').value) {
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 6);
+      document.getElementById('overviewDateFrom').value = weekAgo.toISOString().slice(0,10);
+      document.getElementById('overviewDateTo').value = today.toISOString().slice(0,10);
+    }
+  } else {
+    picker.classList.remove('show');
+    loadAll();
+  }
 }
 
 // ── 格式化日期范围显示 ──
@@ -1473,6 +1523,11 @@ function formatDateRange(val) {
     const y = new Date(today);
     y.setDate(y.getDate() - 1);
     return y.toISOString().slice(0, 10);
+  }
+  if (val === 'custom') {
+    const df = document.getElementById('overviewDateFrom').value;
+    const dt = document.getElementById('overviewDateTo').value;
+    return df + ' ~ ' + dt;
   }
   const days = parseInt(val);
   const start = new Date(today);
@@ -1509,10 +1564,17 @@ async function loadCompetitor() {
   }
 }
 
-// ── 加载商品TOP5 ──
+// ── 加载商品TOP10 ──
 async function loadProductTop() {
   try {
-    const res = await fetch('/api/product_top?store=' + currentStore);
+    const days = document.getElementById('timeRange').value;
+    let url = '/api/product_top?store=' + currentStore;
+    if (days === 'custom') {
+      url += '&date_from=' + document.getElementById('overviewDateFrom').value + '&date_to=' + document.getElementById('overviewDateTo').value;
+    } else {
+      url += '&days=' + days;
+    }
+    const res = await fetch(url);
     const data = await res.json();
     const container = document.getElementById('productTopTable');
 
@@ -1522,24 +1584,24 @@ async function loadProductTop() {
     }
 
     container.innerHTML = `<table class="data-table">
-      <thead><tr><th></th><th>商品</th><th>支付金额</th><th>占比</th></tr></thead>
+      <thead><tr><th></th><th>商品图片</th><th>商品</th><th>支付金额</th></tr></thead>
       <tbody>
         ${data.map((p, i) => {
-          const ranks = ['rank-1','rank-2','rank-3','rank-other','rank-other'];
+          const rankClass = i < 3 ? ['rank-1','rank-2','rank-3'][i] : 'rank-other';
+          const imgHtml = p.image
+            ? `<div class="prod-thumb-wrap"><img class="prod-thumb" src="${p.image}" alt="" onerror="this.style.display='none'" loading="lazy"><img class="prod-thumb-zoom" src="${p.image}" alt=""></div>`
+            : '<span style="color:var(--text-muted);font-size:11px">无图片</span>';
           return `<tr>
-            <td><span class="rank-badge ${ranks[i]}">${i+1}</span></td>
-            <td>${p.name}</td>
-            <td>${fmtMoney(p.amount)}</td>
-            <td>
-              <div class="progress-bar"><div class="progress-fill" style="width:${p.share}%;background:var(--accent-${i<3?'orange':'blue'})"></div></div>
-              <span style="color:var(--text-muted);font-size:11px">${p.share}%</span>
-            </td>
+            <td><span class="rank-badge ${rankClass}">${i+1}</span></td>
+            <td>${imgHtml}</td>
+            <td><div style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(p.name || '').replace(/"/g,'&quot;')}">${p.name || '-'}</div></td>
+            <td class="money-col">${fmtMoney(p.amount)}</td>
           </tr>`;
         }).join('')}
       </tbody>
     </table>`;
   } catch(e) {
-    console.error('商品TOP5加载失败:', e);
+    console.error('商品TOP10加载失败:', e);
   }
 }
 
@@ -1711,7 +1773,10 @@ function pdSortBy(field) {
   const arrows = ['↕', '↑', '↓'];
   const arrowMap = {
     gmv: 'pdArrowGmv', refund: 'pdArrowRefund', net_gmv: 'pdArrowNet',
-    ad_cost: 'pdArrowAd', seed_cost: 'pdArrowSeed', total_cost: 'pdArrowTotal'
+    ad_cost: 'pdArrowAd', seed_cost: 'pdArrowSeed', total_cost: 'pdArrowTotal',
+    roi: 'pdArrowRoi', pay_exposure: 'pdArrowExposure', pay_visitors: 'pdArrowVisitors',
+    pay_direct_cart: 'pdArrowDcart', pay_total_cart: 'pdArrowTcart',
+    consultations: 'pdArrowConsult', pay_orders: 'pdArrowOrders'
   };
 
   // 清除所有箭头高亮
@@ -1828,9 +1893,22 @@ function renderPdTable() {
       <td class="money-col" title="种菜订单 ${p.seed_count} 笔 × ¥8">${fmtMoney(p.seed_cost)}</td>
       <td class="money-col" style="font-weight:600">${fmtMoney(p.total_cost)}</td>
       <td style="text-align:center">${p.cost_ratio.toFixed(2)}%</td>
+      <td class="money-col" style="font-weight:600;color:var(--accent-cyan)">${p.roi.toFixed(2)}</td>
+      <td style="text-align:right;font-family:monospace">${p.pay_exposure.toLocaleString()}</td>
+      <td style="text-align:right;font-family:monospace">${p.pay_visitors.toLocaleString()}</td>
+      <td style="text-align:center">${p.pay_ctr.toFixed(2)}%</td>
+      <td style="text-align:right;font-family:monospace">${p.pay_direct_cart.toLocaleString()}</td>
+      <td class="money-col">${p.pay_direct_cart_cost > 0 ? '¥' + p.pay_direct_cart_cost.toFixed(2) : '-'}</td>
+      <td style="text-align:center">${p.pay_direct_cart_rate.toFixed(2)}%</td>
+      <td style="text-align:right;font-family:monospace">${p.pay_total_cart.toLocaleString()}</td>
+      <td class="money-col">${p.pay_total_cart_cost > 0 ? '¥' + p.pay_total_cart_cost.toFixed(2) : '-'}</td>
+      <td style="text-align:center">${p.pay_total_cart_rate.toFixed(2)}%</td>
+      <td style="text-align:right;font-family:monospace">${p.consultations.toLocaleString()}</td>
+      <td style="text-align:right;font-family:monospace">${p.pay_orders.toLocaleString()}</td>
+      <td style="text-align:center">${p.pay_conversion_rate.toFixed(2)}%</td>
     </tr>`;
   }).join('')
-    : '<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--text-muted)">无匹配结果</td></tr>';
+    : '<tr><td colspan="25" style="text-align:center;padding:40px;color:var(--text-muted)">无匹配结果</td></tr>';
 
   // 分页导航
   if (totalPages <= 1) {
@@ -1871,7 +1949,7 @@ function renderPdTable() {
 async function loadProductData() {
   const tbody = document.getElementById('pdTableBody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="12" class="prod-table-loading">加载中...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="25" class="prod-table-loading">加载中...</td></tr>';
   document.getElementById('pdPagination').innerHTML = '';
 
   try {
@@ -1883,11 +1961,11 @@ async function loadProductData() {
       const dateFrom = document.getElementById('pdDateFrom').value;
       const dateTo = document.getElementById('pdDateTo').value;
       if (!dateFrom || !dateTo) {
-        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--accent-red)">请选择开始日期和结束日期</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="25" style="text-align:center;padding:40px;color:var(--accent-red)">请选择开始日期和结束日期</td></tr>';
         return;
       }
       if (dateFrom > dateTo) {
-        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--accent-red)">开始日期不能晚于结束日期</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="25" style="text-align:center;padding:40px;color:var(--accent-red)">开始日期不能晚于结束日期</td></tr>';
         return;
       }
       url += '&date_from=' + dateFrom + '&date_to=' + dateTo;
@@ -1910,19 +1988,225 @@ async function loadProductData() {
     });
 
     if (!pdData.length) {
-      tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--text-muted)">暂无数据</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="25" style="text-align:center;padding:40px;color:var(--text-muted)">暂无数据</td></tr>';
       return;
     }
 
     renderPdTable();
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--accent-red)">加载失败: ' + e.message + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="25" style="text-align:center;padding:40px;color:var(--accent-red)">加载失败: ' + e.message + '</td></tr>';
   }
 }
 
 // ── AI 分析（商品数据） ──
 function closeAiModal() {
   document.getElementById('aiModal').classList.add('hidden');
+}
+
+
+// ── 推广数据概况（独立模块，与商品数据解耦） ──
+let tgData = [];
+let tgPage = 1;
+let tgSortField = '';
+let tgSortDir = 'none';
+let tgSearchQuery = '';
+let tgSearchModel = '';
+const TG_PAGE_SIZE = 10;
+
+function tgSortBy(field) {
+  const arrows = ['↕', '↑', '↓'];
+  const arrowMap = {
+    gmv: 'tgArrowGmv', refund: 'tgArrowRefund', net_gmv: 'tgArrowNet',
+    ad_cost: 'tgArrowAd', seed_cost: 'tgArrowSeed', total_cost: 'tgArrowTotal',
+    roi: 'tgArrowRoi', pay_exposure: 'tgArrowExposure', pay_visitors: 'tgArrowVisitors',
+    pay_direct_cart: 'tgArrowDcart', pay_total_cart: 'tgArrowTcart',
+    consultations: 'tgArrowConsult', pay_orders: 'tgArrowOrders'
+  };
+  Object.values(arrowMap).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = '↕'; el.className = 'sort-arrow'; }
+  });
+  if (tgSortField !== field) {
+    tgSortField = field;
+    tgSortDir = 'desc';
+  } else {
+    if (tgSortDir === 'desc') tgSortDir = 'asc';
+    else { tgSortDir = 'none'; tgSortField = ''; }
+  }
+  if (tgSortDir !== 'none') {
+    const el = document.getElementById(arrowMap[field]);
+    if (el) {
+      el.textContent = arrows[tgSortDir === 'desc' ? 1 : 2];
+      el.className = 'sort-arrow active';
+    }
+    tgData.sort((a, b) => tgSortDir === 'desc' ? b[field] - a[field] : a[field] - b[field]);
+  } else {
+    tgData.sort((a, b) => (a.prod_id || '').localeCompare(b.prod_id || ''));
+  }
+  tgPage = 1;
+  renderTgTable();
+}
+
+function onTgTimeChange(val) {
+  const picker = document.getElementById('tgDatePicker');
+  if (val === 'custom') {
+    picker.classList.add('show');
+    if (!document.getElementById('tgDateFrom').value) {
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 6);
+      document.getElementById('tgDateFrom').value = weekAgo.toISOString().slice(0,10);
+      document.getElementById('tgDateTo').value = today.toISOString().slice(0,10);
+    }
+  } else {
+    picker.classList.remove('show');
+    tgPage = 1;
+    tgLoadData();
+  }
+}
+
+function tgSearch() {
+  tgSearchQuery = document.getElementById('tgSearchInput').value.trim();
+  tgSearchModel = document.getElementById('tgSearchModelInput').value.trim();
+  tgPage = 1;
+  tgSortField = '';
+  tgSortDir = 'none';
+  document.querySelectorAll('.sort-arrow').forEach(el => {
+    el.textContent = '↕';
+    el.className = 'sort-arrow';
+  });
+  renderTgTable();
+}
+
+function tgClearSearch() {
+  document.getElementById('tgSearchInput').value = '';
+  document.getElementById('tgSearchModelInput').value = '';
+  tgSearchQuery = '';
+  tgSearchModel = '';
+  tgPage = 1;
+  renderTgTable();
+}
+
+function renderTgTable() {
+  const tbody = document.getElementById('tgTableBody');
+  const pagination = document.getElementById('tgPagination');
+  if (!tbody) return;
+  let filtered = tgData;
+  if (tgSearchQuery) {
+    filtered = filtered.filter(p => p.prod_id && p.prod_id.includes(tgSearchQuery));
+  }
+  if (tgSearchModel) {
+    filtered = filtered.filter(p => p.model && p.model.includes(tgSearchModel));
+  }
+  const totalPages = Math.max(1, Math.ceil(filtered.length / TG_PAGE_SIZE));
+  if (tgPage > totalPages) tgPage = totalPages;
+  const start = (tgPage - 1) * TG_PAGE_SIZE;
+  const pageData = filtered.slice(start, start + TG_PAGE_SIZE);
+  tbody.innerHTML = pageData.length
+    ? pageData.map(p => {
+        const imgHtml = p.image
+      ? `<div class="prod-thumb-wrap"><img class="prod-thumb" src="${p.image}" alt="" onerror="this.style.display='none'" loading="lazy"><img class="prod-thumb-zoom" src="${p.image}" alt=""></div>`
+      : '<span style="color:var(--text-muted);font-size:11px">无图片</span>';
+    const rowClass = p.cost_ratio > 15 ? ' class="cost-ratio-highlight"' : '';
+    return `<tr${rowClass}>
+      <td style="font-family:monospace;font-size:11px">${p.prod_id || '-'}</td>
+      <td>${p.status || '-'}</td>
+      <td><div class="prod-title-cell" title="${(p.title || '').replace(/"/g,'&quot;')}">${p.title || '-'}</div></td>
+      <td style="font-family:monospace;font-size:11px">${p.model || '-'}</td>
+      <td>${imgHtml}</td>
+      <td class="money-col">${fmtMoney(p.gmv)}</td>
+      <td class="money-col">${fmtMoney(p.refund)}</td>
+      <td class="money-col" style="font-weight:600">${fmtMoney(p.net_gmv)}</td>
+      <td class="money-col">${fmtMoney(p.ad_cost)}</td>
+      <td class="money-col" title="种菜订单 ${p.seed_count} 笔 × ¥8">${fmtMoney(p.seed_cost)}</td>
+      <td class="money-col" style="font-weight:600">${fmtMoney(p.total_cost)}</td>
+      <td style="text-align:center">${p.cost_ratio.toFixed(2)}%</td>
+      <td class="money-col" style="font-weight:600;color:var(--accent-cyan)">${p.roi.toFixed(2)}</td>
+      <td style="text-align:right;font-family:monospace">${p.pay_exposure.toLocaleString()}</td>
+      <td style="text-align:right;font-family:monospace">${p.pay_visitors.toLocaleString()}</td>
+      <td style="text-align:center">${p.pay_ctr.toFixed(2)}%</td>
+      <td style="text-align:right;font-family:monospace">${p.pay_direct_cart.toLocaleString()}</td>
+      <td class="money-col">${p.pay_direct_cart_cost > 0 ? '¥' + p.pay_direct_cart_cost.toFixed(2) : '-'}</td>
+      <td style="text-align:center">${p.pay_direct_cart_rate.toFixed(2)}%</td>
+      <td style="text-align:right;font-family:monospace">${p.pay_total_cart.toLocaleString()}</td>
+      <td class="money-col">${p.pay_total_cart_cost > 0 ? '¥' + p.pay_total_cart_cost.toFixed(2) : '-'}</td>
+      <td style="text-align:center">${p.pay_total_cart_rate.toFixed(2)}%</td>
+      <td style="text-align:right;font-family:monospace">${p.consultations.toLocaleString()}</td>
+      <td style="text-align:right;font-family:monospace">${p.pay_orders.toLocaleString()}</td>
+      <td style="text-align:center">${p.pay_conversion_rate.toFixed(2)}%</td>
+    </tr>`;
+  }).join('')
+    : '<tr><td colspan="25" style="text-align:center;padding:40px;color:var(--text-muted)">无匹配结果</td></tr>';
+  if (totalPages <= 1) {
+    pagination.innerHTML = '';
+    return;
+  }
+  let html = '';
+  html += '<button class="page-btn" onclick="tgPage--;renderTgTable()" ' + (tgPage <= 1 ? 'disabled' : '') + '>‹</button>';
+  let startPage = Math.max(1, tgPage - 2);
+  let endPage = Math.min(totalPages, startPage + 4);
+  if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+  if (startPage > 1) {
+    html += '<button class="page-btn" onclick="tgPage=1;renderTgTable()">1</button>';
+    if (startPage > 2) html += '<span class="page-info">…</span>';
+  }
+  for (let i = startPage; i <= endPage; i++) {
+    html += '<button class="page-btn' + (i === tgPage ? ' active' : '') + '" onclick="tgPage=' + i + ';renderTgTable()">' + i + '</button>';
+  }
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) html += '<span class="page-info">…</span>';
+    html += '<button class="page-btn" onclick="tgPage=' + totalPages + ';renderTgTable()">' + totalPages + '</button>';
+  }
+  html += '<button class="page-btn" onclick="tgPage++;renderTgTable()" ' + (tgPage >= totalPages ? 'disabled' : '') + '>›</button>';
+  html += '<span class="page-info">共 ' + filtered.length + ' 条</span>';
+  pagination.innerHTML = html;
+}
+
+async function tgLoadData() {
+  const tbody = document.getElementById('tgTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="25" class="prod-table-loading">加载中...</td></tr>';
+  document.getElementById('tgPagination').innerHTML = '';
+  try {
+    const sel = document.getElementById('tgTimeRange');
+    const val = sel.value;
+    let url = '/api/product_data?store=' + currentStore;
+    if (val === 'custom') {
+      const dateFrom = document.getElementById('tgDateFrom').value;
+      const dateTo = document.getElementById('tgDateTo').value;
+      if (!dateFrom || !dateTo) {
+        tbody.innerHTML = '<tr><td colspan="25" style="text-align:center;padding:40px;color:var(--accent-red)">请选择开始日期和结束日期</td></tr>';
+        return;
+      }
+      if (dateFrom > dateTo) {
+        tbody.innerHTML = '<tr><td colspan="25" style="text-align:center;padding:40px;color:var(--accent-red)">开始日期不能晚于结束日期</td></tr>';
+        return;
+      }
+      url += '&date_from=' + dateFrom + '&date_to=' + dateTo;
+    } else {
+      url += '&days=' + val;
+    }
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    tgData = await res.json();
+    tgPage = 1;
+    tgSearchQuery = '';
+    tgSearchModel = '';
+    tgSortField = '';
+    tgSortDir = 'none';
+    document.getElementById('tgSearchInput').value = '';
+    document.getElementById('tgSearchModelInput').value = '';
+    document.querySelectorAll('.sort-arrow').forEach(el => {
+      el.textContent = '↕'; el.className = 'sort-arrow';
+    });
+    if (!tgData.length) {
+      tbody.innerHTML = '<tr><td colspan="25" style="text-align:center;padding:40px;color:var(--text-muted)">暂无数据</td></tr>';
+      return;
+    }
+    renderTgTable();
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="25" style="text-align:center;padding:40px;color:var(--accent-red)">加载失败: ' + e.message + '</td></tr>';
+  }
 }
 
 async function pdAiAnalyze() {
@@ -2008,7 +2292,8 @@ function switchPage(name) {
   if (nav) nav.classList.add('active');
   // 如果是经营总览，加载数据
   if (name === 'jingyingzonglan') loadAll();
-  if (name === 'shangpinshuju' || name === 'tuiguangshuju') loadProductData();
+  if (name === 'shangpinshuju') loadProductData();
+  if (name === 'tuiguangshuju') tgLoadData();
 }
 
 // ── 加载全部 ──
@@ -2022,8 +2307,13 @@ async function loadAll() {
   document.getElementById('dateRange').textContent = formatDateRange(rangeVal);
 
   // 更新趋势图标签
+  const picker = document.getElementById('overviewDatePicker');
   if (rangeVal === 'yesterday') {
     document.getElementById('trendTag').textContent = '昨天';
+  } else if (rangeVal === 'custom') {
+    const df = document.getElementById('overviewDateFrom').value;
+    const dt = document.getElementById('overviewDateTo').value;
+    document.getElementById('trendTag').textContent = df + ' ~ ' + dt;
   } else {
     document.getElementById('trendTag').textContent = '近' + rangeVal + '天';
   }

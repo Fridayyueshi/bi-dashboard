@@ -153,11 +153,19 @@ def api_check_session():
 def api_shop_overview():
     from flask import request
     days_param = request.args.get('days', '7')
-    if days_param == 'yesterday':
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+
+    if date_from and date_to:
+        date_filter = f"{S['stat_date']} >= '{date_from}'::date AND {S['stat_date']} < ('{date_to}'::date + INTERVAL '1 day')"
+        w_filter = f"{W['date']} >= '{date_from}'::date AND {W['date']} < ('{date_to}'::date + INTERVAL '1 day')"
+    elif days_param == 'yesterday':
         date_filter = f"{S['stat_date']} = CURRENT_DATE - INTERVAL '1 day'"
+        w_filter = f"{W['date']} = CURRENT_DATE - INTERVAL '1 day'"
     else:
         days = int(days_param)
         date_filter = f"{S['stat_date']} >= CURRENT_DATE - INTERVAL '{days} days'"
+        w_filter = f"{W['date']} >= CURRENT_DATE - INTERVAL '{days} days'"
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -176,10 +184,6 @@ def api_shop_overview():
     s = cur.fetchone()
 
     # 无界 — 推广花费（按场景分类）
-    if days_param == 'yesterday':
-        w_filter = f"{W['date']} = CURRENT_DATE - INTERVAL '1 day'"
-    else:
-        w_filter = f"{W['date']} >= CURRENT_DATE - INTERVAL '{days} days'"
     cur.execute(f"""
         SELECT
             COALESCE(SUM({W['cost']}), 0) AS total_cost,
@@ -266,7 +270,11 @@ def api_kpi():
 def api_trend():
     from flask import request
     days_param = request.args.get('days', '7')
-    if days_param == 'yesterday':
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    if date_from and date_to:
+        date_filter = f"{S['stat_date']} >= '{date_from}'::date AND {S['stat_date']} < ('{date_to}'::date + INTERVAL '1 day')"
+    elif days_param == 'yesterday':
         date_filter = f"{S['stat_date']} = CURRENT_DATE - INTERVAL '1 day'"
     else:
         days = int(days_param)
@@ -294,7 +302,11 @@ def api_trend():
 def api_ad_trend():
     from flask import request
     days_param = request.args.get('days', '7')
-    if days_param == 'yesterday':
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    if date_from and date_to:
+        date_filter = f"{W['date']} >= '{date_from}'::date AND {W['date']} < ('{date_to}'::date + INTERVAL '1 day')"
+    elif days_param == 'yesterday':
         date_filter = f"{W['date']} = CURRENT_DATE - INTERVAL '1 day'"
     else:
         days = int(days_param)
@@ -342,26 +354,41 @@ def api_ad_trend():
         "days": days_param,
     })
 
-# ── API: 商品支付TOP5 ──
+# ── API: 商品支付TOP10 ──
 @app.route('/api/product_top')
 @login_required
 def api_product_top():
+    days_param = request.args.get('days', '7')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+
+    if date_from and date_to:
+        date_filter = f"{S['stat_date']} >= '{date_from}'::date AND {S['stat_date']} < ('{date_to}'::date + INTERVAL '1 day')"
+    elif days_param == 'yesterday':
+        date_filter = f"{S['stat_date']} = CURRENT_DATE - INTERVAL '1 day'"
+    else:
+        days = int(days_param)
+        date_filter = f"{S['stat_date']} >= CURRENT_DATE - INTERVAL '{days} days'"
+
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(f"""
-        SELECT {S['prod_id']}, {S['prod_name']},
-               COALESCE(SUM({S['pay_amt']}), 0) AS amount,
-               COALESCE(SUM({S['pay_items']}), 0) AS items
-        FROM sycm_sp_all WHERE {S['stat_date']} >= CURRENT_DATE - INTERVAL '7 days'
-        GROUP BY {S['prod_id']}, {S['prod_name']} ORDER BY amount DESC LIMIT 5
+        SELECT s.{S['prod_id']}, s.{S['prod_name']},
+               COALESCE(SUM(s.{S['pay_amt']}), 0) AS amount,
+               COALESCE(SUM(s.{S['pay_items']}), 0) AS items,
+               p."商品图片"
+        FROM sycm_sp_all s
+        LEFT JOIN products p ON s.{S['prod_id']}::text = p."商品ID"
+        WHERE {date_filter}
+        GROUP BY s.{S['prod_id']}, s.{S['prod_name']}, p."商品图片"
+        ORDER BY amount DESC LIMIT 10
     """)
     rows = cur.fetchall()
     cur.close(); conn.close()
-    total = sum(float(r['amount']) for r in rows)
     return jsonify([
-        {"id": r[S_KEY['prod_id']], "name": (r[S_KEY['prod_name']] or '')[:20],
+        {"id": r[S_KEY['prod_id']], "name": (r[S_KEY['prod_name']] or '')[:30],
          "amount": round(float(r['amount']), 2), "items": int(r['items']),
-         "share": round(float(r['amount']) / total * 100, 1) if total > 0 else 0}
+         "image": r['商品图片'] or ''}
         for r in rows
     ])
 
@@ -556,10 +583,16 @@ def api_product_data():
     ''')
     order_map = {r['商品ID']: r for r in cur.fetchall()}
 
-    # 3. 广告花费聚合
+    # 3. 广告花费聚合 + 付费指标
     cur.execute(f'''
         SELECT "主体id",
-               COALESCE(SUM("花费"), 0) AS total_ad
+               COALESCE(SUM("花费"), 0) AS total_ad,
+               COALESCE(SUM("展现量"), 0) AS total_impressions,
+               COALESCE(SUM("点击量"), 0) AS total_clicks,
+               COALESCE(SUM("直接购物车数"), 0) AS direct_cart,
+               COALESCE(SUM("总购物车数"), 0) AS total_cart,
+               COALESCE(SUM("旺旺咨询量"), 0) AS consultations,
+               COALESCE(SUM("成交人数"), 0) AS pay_orders
         FROM wj_spbb_spandjh
         WHERE {date_filter_a}
         GROUP BY "主体id"
@@ -583,6 +616,22 @@ def api_product_data():
         total_cost = ad_cost + seed_cost
         cost_ratio = round(total_cost / (net_gmv if net_gmv > 0 else 1) * 100, 2)
 
+        # 付费指标
+        impressions = float(aa.get('total_impressions', 0) or 0)
+        clicks = float(aa.get('total_clicks', 0) or 0)
+        dcart = float(aa.get('direct_cart', 0) or 0)
+        tcart = float(aa.get('total_cart', 0) or 0)
+        consult = float(aa.get('consultations', 0) or 0)
+        porders = float(aa.get('pay_orders', 0) or 0)
+
+        # 计算衍生指标
+        ctr = round(clicks / impressions * 100, 2) if impressions > 0 else 0
+        dcart_cost = round(ad_cost / dcart, 2) if dcart > 0 else 0
+        dcart_rate = round(dcart / clicks * 100, 2) if clicks > 0 else 0
+        tcart_cost = round(ad_cost / tcart, 2) if tcart > 0 else 0
+        tcart_rate = round(tcart / clicks * 100, 2) if clicks > 0 else 0
+        conv_rate = round(porders / clicks * 100, 2) if clicks > 0 else 0
+
         result.append({
             "prod_id": pid,
             "status": p['商品状态'],
@@ -597,6 +646,20 @@ def api_product_data():
             "seed_cost": seed_cost,
             "total_cost": round(total_cost, 2),
             "cost_ratio": cost_ratio,
+            # 新增付费指标 (13-25列)
+            "roi": round(net_gmv / total_cost, 2) if total_cost > 0 else 0,
+            "pay_exposure": int(impressions),
+            "pay_visitors": int(clicks),
+            "pay_ctr": ctr,
+            "pay_direct_cart": int(dcart),
+            "pay_direct_cart_cost": dcart_cost,
+            "pay_direct_cart_rate": dcart_rate,
+            "pay_total_cart": int(tcart),
+            "pay_total_cart_cost": tcart_cost,
+            "pay_total_cart_rate": tcart_rate,
+            "consultations": int(consult),
+            "pay_orders": int(porders),
+            "pay_conversion_rate": conv_rate,
         })
 
     return jsonify(result)
