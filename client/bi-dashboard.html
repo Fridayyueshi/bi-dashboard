@@ -452,6 +452,19 @@
     .data-table tr:hover td {
       background: var(--bg-card-hover);
     }
+    /* ── 行选中状态 ── */
+    .data-table tr.selected-row td {
+      background: #1a2a40 !important;
+    }
+    .data-table tr.selected-row td.sticky-col {
+      background: #1a2a40 !important;
+    }
+    .cost-ratio-highlight.selected-row td.sticky-col {
+      background: #3d2020 !important;
+    }
+    .cost-ratio-highlight.selected-row:hover td.sticky-col {
+      background: #3d2020 !important;
+    }
 
     .rank-badge {
       display: inline-flex;
@@ -2117,6 +2130,12 @@ function tgSortBy(field) {
   renderTgTable();
 }
 
+function selectTgRow(row) {
+  document.querySelectorAll('.prod-table-wrap .data-table tbody tr.selected-row')
+    .forEach(r => r.classList.remove('selected-row'));
+  row.classList.add('selected-row');
+}
+
 function onTgTimeChange(val) {
   const picker = document.getElementById('tgDatePicker');
   if (val === 'custom') {
@@ -2178,7 +2197,7 @@ function renderTgTable() {
       ? `<div class="prod-thumb-wrap"><img class="prod-thumb" src="${p.image}" alt="" onerror="this.style.display='none'" loading="lazy"><img class="prod-thumb-zoom" src="${p.image}" alt=""></div>`
       : '<span style="color:var(--text-muted);font-size:11px">无图片</span>';
     const rowClass = p.cost_ratio > 15 ? ' class="cost-ratio-highlight"' : '';
-    return `<tr${rowClass}>
+    return `<tr${rowClass} onclick="selectTgRow(this)">
       <td class="sticky-col sticky-col-1" style="font-family:monospace;font-size:11px"><a href="javascript:void(0)" onclick="openPlanDetail('${p.prod_id}')" style="color:var(--accent-cyan);text-decoration:none;cursor:pointer" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${p.prod_id || '-'}</a></td>
       <td class="sticky-col sticky-col-2">${p.status || '-'}</td>
       <td class="sticky-col sticky-col-3"><div class="prod-title-cell" title="${(p.title || '').replace(/"/g,'&quot;')}">${p.title || '-'}</div></td>
