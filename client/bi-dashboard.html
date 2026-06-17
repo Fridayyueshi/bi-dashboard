@@ -564,6 +564,20 @@
       z-index: 1;
     }
     .prod-table-wrap .data-table td { color: var(--text-primary); }
+    /* ── 粘性列（左侧固定列，横向滚动不移动） ── */
+    .prod-table-wrap .sticky-col {
+      position: sticky;
+      z-index: 1;
+      background: var(--bg-card);
+    }
+    .prod-table-wrap .sticky-col.sticky-header {
+      z-index: 3;
+    }
+    .prod-table-wrap .sticky-col-1 { left: 0; }
+    .prod-table-wrap .sticky-col-2 { left: 0; }
+    .prod-table-wrap .sticky-col-3 { left: 0; }
+    .prod-table-wrap .sticky-col-4 { left: 0; }
+    .prod-table-wrap .sticky-col-5 { left: 0; }
     .prod-thumb-wrap {
       position: relative;
       display: inline-block;
@@ -1302,11 +1316,11 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>商品ID</th>
-              <th>商品状态</th>
-              <th>商品标题</th>
-              <th>商品型号</th>
-              <th>商品图片</th>
+              <th class="sticky-col sticky-header sticky-col-1">商品ID</th>
+              <th class="sticky-col sticky-header sticky-col-2">商品状态</th>
+              <th class="sticky-col sticky-header sticky-col-3">商品标题</th>
+              <th class="sticky-col sticky-header sticky-col-4">商品型号</th>
+              <th class="sticky-col sticky-header sticky-col-5">商品图片</th>
               <th class="money-col sortable-header" onclick="tgSortBy('gmv')">总GMV<span class="sort-arrow" id="tgArrowGmv">↕</span></th>
               <th class="money-col sortable-header" onclick="tgSortBy('refund')">退款金额<span class="sort-arrow" id="tgArrowRefund">↕</span></th>
               <th class="money-col sortable-header" onclick="tgSortBy('net_gmv')">去退GMV<span class="sort-arrow" id="tgArrowNet">↕</span></th>
@@ -2159,11 +2173,11 @@ function renderTgTable() {
       : '<span style="color:var(--text-muted);font-size:11px">无图片</span>';
     const rowClass = p.cost_ratio > 15 ? ' class="cost-ratio-highlight"' : '';
     return `<tr${rowClass}>
-      <td style="font-family:monospace;font-size:11px"><a href="javascript:void(0)" onclick="openPlanDetail('${p.prod_id}')" style="color:var(--accent-cyan);text-decoration:none;cursor:pointer" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${p.prod_id || '-'}</a></td>
-      <td>${p.status || '-'}</td>
-      <td><div class="prod-title-cell" title="${(p.title || '').replace(/"/g,'&quot;')}">${p.title || '-'}</div></td>
-      <td style="font-family:monospace;font-size:11px">${p.model || '-'}</td>
-      <td>${imgHtml}</td>
+      <td class="sticky-col sticky-col-1" style="font-family:monospace;font-size:11px"><a href="javascript:void(0)" onclick="openPlanDetail('${p.prod_id}')" style="color:var(--accent-cyan);text-decoration:none;cursor:pointer" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${p.prod_id || '-'}</a></td>
+      <td class="sticky-col sticky-col-2">${p.status || '-'}</td>
+      <td class="sticky-col sticky-col-3"><div class="prod-title-cell" title="${(p.title || '').replace(/"/g,'&quot;')}">${p.title || '-'}</div></td>
+      <td class="sticky-col sticky-col-4" style="font-family:monospace;font-size:11px">${p.model || '-'}</td>
+      <td class="sticky-col sticky-col-5">${imgHtml}</td>
       <td class="money-col">${fmtMoney(p.gmv)}</td>
       <td class="money-col">${fmtMoney(p.refund)}</td>
       <td class="money-col" style="font-weight:600">${fmtMoney(p.net_gmv)}</td>
@@ -2189,6 +2203,7 @@ function renderTgTable() {
     : '<tr><td colspan="25" style="text-align:center;padding:40px;color:var(--text-muted)">无匹配结果</td></tr>';
   if (totalPages <= 1) {
     pagination.innerHTML = '';
+    calcTgStickyOffsets();
     return;
   }
   let html = '';
@@ -2210,6 +2225,26 @@ function renderTgTable() {
   html += '<button class="page-btn" onclick="tgPage++;renderTgTable()" ' + (tgPage >= totalPages ? 'disabled' : '') + '>›</button>';
   html += '<span class="page-info">共 ' + filtered.length + ' 条</span>';
   pagination.innerHTML = html;
+  calcTgStickyOffsets();
+}
+
+function calcTgStickyOffsets() {
+  const table = document.querySelector('.prod-table-wrap .data-table');
+  if (!table) return;
+  const headerRow = table.querySelector('thead tr');
+  if (!headerRow) return;
+  const headerCells = headerRow.querySelectorAll('.sticky-col');
+  let offset = 0;
+  headerCells.forEach((th, idx) => {
+    const cls = 'sticky-col-' + (idx + 1);
+    const width = th.offsetWidth;
+    th.style.left = offset + 'px';
+    // 同步所有数据行的同列 td
+    table.querySelectorAll('tbody tr td.sticky-col.' + cls).forEach(td => {
+      td.style.left = offset + 'px';
+    });
+    offset += width;
+  });
 }
 
 async function tgLoadData() {
@@ -2400,12 +2435,17 @@ function initDashboard() {
 
 // ── 推广计划详情悬浮窗 ──
 let planCurrentProdId = '';
+let planPage = 1;
+let planData = [];
+const PLAN_PAGE_SIZE = 15;
 
 function openPlanDetail(prodId) {
   planCurrentProdId = prodId;
+  planPage = 1;
   document.getElementById('planModalProdId').textContent = '【商品: ' + prodId + '】';
   document.getElementById('planModal').classList.remove('hidden');
   document.getElementById('planTableBody').innerHTML = '<tr><td colspan="17" class="plan-modal-loading">加载中...</td></tr>';
+  document.getElementById('planPagination').innerHTML = '';
   loadPlanDetail();
 }
 
@@ -2426,6 +2466,7 @@ function onPlanTimeChange(val) {
     }
   } else {
     picker.classList.remove('show');
+    planPage = 1;
     loadPlanDetail();
   }
 }
@@ -2437,10 +2478,98 @@ const planSceneUrls = {
   183: 'content'
 };
 
+function renderPlanTable() {
+  const tbody = document.getElementById('planTableBody');
+  const pagination = document.getElementById('planPagination');
+  const totalPages = Math.ceil(planData.length / PLAN_PAGE_SIZE);
+
+  if (!planData.length) {
+    tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:var(--text-muted)">暂无推广计划数据</td></tr>';
+    pagination.innerHTML = '';
+    return;
+  }
+
+  // 修正页码越界
+  if (planPage < 1) planPage = 1;
+  if (planPage > totalPages) planPage = totalPages;
+
+  const start = (planPage - 1) * PLAN_PAGE_SIZE;
+  const end = Math.min(start + PLAN_PAGE_SIZE, planData.length);
+  const pageData = planData.slice(start, end);
+
+  tbody.innerHTML = pageData.map(p => {
+    const avgClickCost = p.avg_click_cost > 0 ? '¥' + p.avg_click_cost.toFixed(2) : '-';
+    const dcartCost = p.direct_cart_cost > 0 ? '¥' + p.direct_cart_cost.toFixed(2) : '-';
+    const tcartCost = p.total_cart_cost > 0 ? '¥' + p.total_cart_cost.toFixed(2) : '-';
+    const consultCost = p.consult_cost > 0 ? '¥' + p.consult_cost.toFixed(2) : '-';
+    const visitorRatio = p.visitor_ratio > 0 ? p.visitor_ratio.toFixed(2) + '%' : '-';
+
+    const scenePath = planSceneUrls[p.scene_id];
+    const planIdHtml = scenePath
+      ? '<a href="https://one.alimama.com/index.html#!/manage/' + scenePath + '?offset=0&searchKey=campaignId&searchValue=' + p.plan_id + '" target="_blank" style="color:var(--accent-cyan);text-decoration:none;cursor:pointer" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">' + p.plan_id + '</a>'
+      : p.plan_id;
+
+    return '<tr>' +
+      '<td style="font-family:monospace;font-size:11px">' + planIdHtml + '</td>' +
+      '<td>' + (p.plan_name || '-') + '</td>' +
+      '<td style="text-align:right;font-family:monospace">' + p.impressions.toLocaleString() + '</td>' +
+      '<td style="text-align:right;font-family:monospace">' + p.clicks.toLocaleString() + '</td>' +
+      '<td class="money-col">¥' + p.cost.toFixed(2) + '</td>' +
+      '<td class="money-col">¥' + p.direct_amount.toFixed(2) + '</td>' +
+      '<td class="money-col">¥' + p.total_amount.toFixed(2) + '</td>' +
+      '<td style="text-align:center;font-family:monospace">' + avgClickCost + '</td>' +
+      '<td style="text-align:right;font-family:monospace">' + p.direct_cart.toLocaleString() + '</td>' +
+      '<td style="text-align:center;font-family:monospace">' + dcartCost + '</td>' +
+      '<td style="text-align:right;font-family:monospace">' + p.total_cart.toLocaleString() + '</td>' +
+      '<td style="text-align:center;font-family:monospace">' + tcartCost + '</td>' +
+      '<td class="money-col">¥' + p.direct_amount_2.toFixed(2) + '</td>' +
+      '<td class="money-col">¥' + p.total_amount_2.toFixed(2) + '</td>' +
+      '<td style="text-align:center">' + visitorRatio + '</td>' +
+      '<td style="text-align:right;font-family:monospace">' + p.consultations.toLocaleString() + '</td>' +
+      '<td style="text-align:center;font-family:monospace">' + consultCost + '</td>' +
+      '</tr>';
+  }).join('');
+
+  // 分页导航
+  if (totalPages <= 1) {
+    pagination.innerHTML = '';
+    return;
+  }
+
+  let html = '';
+  // 上一页
+  html += '<button class="page-btn" onclick="planPage--;renderPlanTable()" ' + (planPage <= 1 ? 'disabled' : '') + '>‹</button>';
+
+  let startPage = Math.max(1, planPage - 2);
+  let endPage = Math.min(totalPages, startPage + 4);
+  if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+  if (startPage > 1) {
+    html += '<button class="page-btn" onclick="planPage=1;renderPlanTable()">1</button>';
+    if (startPage > 2) html += '<span class="page-info" style="font-size:12px">…</span>';
+  }
+  for (let i = startPage; i <= endPage; i++) {
+    html += '<button class="page-btn' + (i === planPage ? ' active' : '') + '" onclick="planPage=' + i + ';renderPlanTable()">' + i + '</button>';
+  }
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) html += '<span class="page-info" style="font-size:12px">…</span>';
+    html += '<button class="page-btn" onclick="planPage=' + totalPages + ';renderPlanTable()">' + totalPages + '</button>';
+  }
+
+  // 下一页
+  html += '<button class="page-btn" onclick="planPage++;renderPlanTable()" ' + (planPage >= totalPages ? 'disabled' : '') + '>›</button>';
+
+  // 总数
+  html += '<span class="page-info">共 ' + planData.length + ' 条</span>';
+
+  pagination.innerHTML = html;
+}
+
 async function loadPlanDetail() {
   const tbody = document.getElementById('planTableBody');
   if (!planCurrentProdId) return;
   tbody.innerHTML = '<tr><td colspan="17" class="plan-modal-loading">加载中...</td></tr>';
+  document.getElementById('planPagination').innerHTML = '';
 
   try {
     const sel = document.getElementById('planTimeRange');
@@ -2465,46 +2594,8 @@ async function loadPlanDetail() {
 
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-
-    if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:var(--text-muted)">暂无推广计划数据</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = data.map(p => {
-      const avgClickCost = p.avg_click_cost > 0 ? '¥' + p.avg_click_cost.toFixed(2) : '-';
-      const dcartCost = p.direct_cart_cost > 0 ? '¥' + p.direct_cart_cost.toFixed(2) : '-';
-      const tcartCost = p.total_cart_cost > 0 ? '¥' + p.total_cart_cost.toFixed(2) : '-';
-      const consultCost = p.consult_cost > 0 ? '¥' + p.consult_cost.toFixed(2) : '-';
-      const visitorRatio = p.visitor_ratio > 0 ? p.visitor_ratio.toFixed(2) + '%' : '-';
-
-      // 场景ID → 超链接
-      const scenePath = planSceneUrls[p.scene_id];
-      const planIdHtml = scenePath
-        ? '<a href="https://one.alimama.com/index.html#!/manage/' + scenePath + '?offset=0&searchKey=campaignId&searchValue=' + p.plan_id + '" target="_blank" style="color:var(--accent-cyan);text-decoration:none;cursor:pointer" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">' + p.plan_id + '</a>'
-        : p.plan_id;
-
-      return '<tr>' +
-        '<td style="font-family:monospace;font-size:11px">' + planIdHtml + '</td>' +
-        '<td>' + (p.plan_name || '-') + '</td>' +
-        '<td style="text-align:right;font-family:monospace">' + p.impressions.toLocaleString() + '</td>' +
-        '<td style="text-align:right;font-family:monospace">' + p.clicks.toLocaleString() + '</td>' +
-        '<td class="money-col">¥' + p.cost.toFixed(2) + '</td>' +
-        '<td class="money-col">¥' + p.direct_amount.toFixed(2) + '</td>' +
-        '<td class="money-col">¥' + p.total_amount.toFixed(2) + '</td>' +
-        '<td style="text-align:center;font-family:monospace">' + avgClickCost + '</td>' +
-        '<td style="text-align:right;font-family:monospace">' + p.direct_cart.toLocaleString() + '</td>' +
-        '<td style="text-align:center;font-family:monospace">' + dcartCost + '</td>' +
-        '<td style="text-align:right;font-family:monospace">' + p.total_cart.toLocaleString() + '</td>' +
-        '<td style="text-align:center;font-family:monospace">' + tcartCost + '</td>' +
-        '<td class="money-col">¥' + p.direct_amount_2.toFixed(2) + '</td>' +
-        '<td class="money-col">¥' + p.total_amount_2.toFixed(2) + '</td>' +
-        '<td style="text-align:center">' + visitorRatio + '</td>' +
-        '<td style="text-align:right;font-family:monospace">' + p.consultations.toLocaleString() + '</td>' +
-        '<td style="text-align:center;font-family:monospace">' + consultCost + '</td>' +
-        '</tr>';
-    }).join('');
+    planData = await res.json();
+    renderPlanTable();
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:var(--accent-red)">加载失败: ' + e.message + '</td></tr>';
   }
@@ -2512,6 +2603,7 @@ async function loadPlanDetail() {
 
 // ── 启动：先检查登录状态 ──
 checkSession();
+window.addEventListener('resize', calcTgStickyOffsets);
 </script>
 
 <!-- ── 推广计划详情悬浮窗 ── -->
@@ -2552,6 +2644,7 @@ checkSession();
             <tr><td colspan="17" class="plan-modal-loading">选择商品后加载数据...</td></tr>
           </tbody>
         </table>
+        <div class="pd-pagination" id="planPagination" style="justify-content:center;padding:10px 0"></div>
       </div>
     </div>
   </div>
