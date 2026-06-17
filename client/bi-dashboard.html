@@ -870,6 +870,56 @@
       margin-top: 10px;
       min-height: 20px;
     }
+  /* ── 推广计划详情悬浮窗 ── */
+    .plan-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .plan-modal-overlay.hidden { display: none; }
+    .plan-modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 90vw;
+      max-width: 1200px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .plan-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 16px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .plan-modal-close {
+      background: none; border: none;
+      color: var(--text-secondary);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .plan-modal-close:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+    .plan-modal-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .plan-modal-body .date-range { margin-bottom: 12px; }
+    .plan-modal-loading { text-align: center; padding: 40px; color: var(--text-muted); }
+    .pd-date-picker.show { display: inline-flex; }
   </style>
 </head>
 <body>
@@ -2109,7 +2159,7 @@ function renderTgTable() {
       : '<span style="color:var(--text-muted);font-size:11px">无图片</span>';
     const rowClass = p.cost_ratio > 15 ? ' class="cost-ratio-highlight"' : '';
     return `<tr${rowClass}>
-      <td style="font-family:monospace;font-size:11px">${p.prod_id || '-'}</td>
+      <td style="font-family:monospace;font-size:11px"><a href="javascript:void(0)" onclick="openPlanDetail('${p.prod_id}')" style="color:var(--accent-cyan);text-decoration:none;cursor:pointer" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${p.prod_id || '-'}</a></td>
       <td>${p.status || '-'}</td>
       <td><div class="prod-title-cell" title="${(p.title || '').replace(/"/g,'&quot;')}">${p.title || '-'}</div></td>
       <td style="font-family:monospace;font-size:11px">${p.model || '-'}</td>
@@ -2348,9 +2398,164 @@ function initDashboard() {
   }
 }
 
+// ── 推广计划详情悬浮窗 ──
+let planCurrentProdId = '';
+
+function openPlanDetail(prodId) {
+  planCurrentProdId = prodId;
+  document.getElementById('planModalProdId').textContent = '【商品: ' + prodId + '】';
+  document.getElementById('planModal').classList.remove('hidden');
+  document.getElementById('planTableBody').innerHTML = '<tr><td colspan="17" class="plan-modal-loading">加载中...</td></tr>';
+  loadPlanDetail();
+}
+
+function closePlanDetail() {
+  document.getElementById('planModal').classList.add('hidden');
+}
+
+function onPlanTimeChange(val) {
+  const picker = document.getElementById('planDatePicker');
+  if (val === 'custom') {
+    picker.classList.add('show');
+    if (!document.getElementById('planDateFrom').value) {
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 6);
+      document.getElementById('planDateFrom').value = weekAgo.toISOString().slice(0,10);
+      document.getElementById('planDateTo').value = today.toISOString().slice(0,10);
+    }
+  } else {
+    picker.classList.remove('show');
+    loadPlanDetail();
+  }
+}
+
+const planSceneUrls = {
+  371: 'search',
+  372: 'display',
+  436: 'onesite',
+  183: 'content'
+};
+
+async function loadPlanDetail() {
+  const tbody = document.getElementById('planTableBody');
+  if (!planCurrentProdId) return;
+  tbody.innerHTML = '<tr><td colspan="17" class="plan-modal-loading">加载中...</td></tr>';
+
+  try {
+    const sel = document.getElementById('planTimeRange');
+    const val = sel.value;
+    let url = '/api/plan_detail?prod_id=' + planCurrentProdId;
+
+    if (val === 'custom') {
+      const dateFrom = document.getElementById('planDateFrom').value;
+      const dateTo = document.getElementById('planDateTo').value;
+      if (!dateFrom || !dateTo) {
+        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:var(--accent-red)">请选择开始日期和结束日期</td></tr>';
+        return;
+      }
+      if (dateFrom > dateTo) {
+        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:var(--accent-red)">开始日期不能晚于结束日期</td></tr>';
+        return;
+      }
+      url += '&date_from=' + dateFrom + '&date_to=' + dateTo;
+    } else {
+      url += '&days=' + val;
+    }
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:var(--text-muted)">暂无推广计划数据</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(p => {
+      const avgClickCost = p.avg_click_cost > 0 ? '¥' + p.avg_click_cost.toFixed(2) : '-';
+      const dcartCost = p.direct_cart_cost > 0 ? '¥' + p.direct_cart_cost.toFixed(2) : '-';
+      const tcartCost = p.total_cart_cost > 0 ? '¥' + p.total_cart_cost.toFixed(2) : '-';
+      const consultCost = p.consult_cost > 0 ? '¥' + p.consult_cost.toFixed(2) : '-';
+      const visitorRatio = p.visitor_ratio > 0 ? p.visitor_ratio.toFixed(2) + '%' : '-';
+
+      // 场景ID → 超链接
+      const scenePath = planSceneUrls[p.scene_id];
+      const planIdHtml = scenePath
+        ? '<a href="https://one.alimama.com/index.html#!/manage/' + scenePath + '?offset=0&searchKey=campaignId&searchValue=' + p.plan_id + '" target="_blank" style="color:var(--accent-cyan);text-decoration:none;cursor:pointer" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">' + p.plan_id + '</a>'
+        : p.plan_id;
+
+      return '<tr>' +
+        '<td style="font-family:monospace;font-size:11px">' + planIdHtml + '</td>' +
+        '<td>' + (p.plan_name || '-') + '</td>' +
+        '<td style="text-align:right;font-family:monospace">' + p.impressions.toLocaleString() + '</td>' +
+        '<td style="text-align:right;font-family:monospace">' + p.clicks.toLocaleString() + '</td>' +
+        '<td class="money-col">¥' + p.cost.toFixed(2) + '</td>' +
+        '<td class="money-col">¥' + p.direct_amount.toFixed(2) + '</td>' +
+        '<td class="money-col">¥' + p.total_amount.toFixed(2) + '</td>' +
+        '<td style="text-align:center;font-family:monospace">' + avgClickCost + '</td>' +
+        '<td style="text-align:right;font-family:monospace">' + p.direct_cart.toLocaleString() + '</td>' +
+        '<td style="text-align:center;font-family:monospace">' + dcartCost + '</td>' +
+        '<td style="text-align:right;font-family:monospace">' + p.total_cart.toLocaleString() + '</td>' +
+        '<td style="text-align:center;font-family:monospace">' + tcartCost + '</td>' +
+        '<td class="money-col">¥' + p.direct_amount_2.toFixed(2) + '</td>' +
+        '<td class="money-col">¥' + p.total_amount_2.toFixed(2) + '</td>' +
+        '<td style="text-align:center">' + visitorRatio + '</td>' +
+        '<td style="text-align:right;font-family:monospace">' + p.consultations.toLocaleString() + '</td>' +
+        '<td style="text-align:center;font-family:monospace">' + consultCost + '</td>' +
+        '</tr>';
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:var(--accent-red)">加载失败: ' + e.message + '</td></tr>';
+  }
+}
+
 // ── 启动：先检查登录状态 ──
 checkSession();
 </script>
+
+<!-- ── 推广计划详情悬浮窗 ── -->
+<div class="plan-modal-overlay hidden" id="planModal">
+  <div class="plan-modal-box">
+    <div class="plan-modal-header">
+      <span>📢 推广计划详情 <span id="planModalProdId" style="color:var(--accent-cyan);font-family:monospace"></span></span>
+      <button class="plan-modal-close" onclick="closePlanDetail()">✕</button>
+    </div>
+    <div class="plan-modal-body">
+      <div class="date-range" style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px">
+        📅 <span style="margin-right:4px">时间周期</span>
+        <select id="planTimeRange" onchange="onPlanTimeChange(this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:12px;cursor:pointer">
+          <option value="yesterday">昨天</option>
+          <option value="7" selected>近7天</option>
+          <option value="15">近15天</option>
+          <option value="30">近30天</option>
+          <option value="custom">自定义</option>
+        </select>
+        <div class="pd-date-picker" id="planDatePicker">
+          <input type="date" id="planDateFrom">
+          <span style="color:var(--text-muted);font-size:12px">至</span>
+          <input type="date" id="planDateTo">
+          <button class="confirm-btn" onclick="loadPlanDetail()">确定</button>
+        </div>
+      </div>
+      <div class="prod-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>计划ID</th><th>计划名称</th><th>展现量</th><th>点击量</th><th>花费</th>
+              <th>直接成交金额</th><th>总成交金额</th><th>平均点击花费</th><th>直接购物车数</th>
+              <th>直接加购成本</th><th>总购物车数</th><th>总加购成本</th><th>直接成交金额</th>
+              <th>总成交金额</th><th>引导访问潜客占比</th><th>旺旺咨询量</th><th>咨询成本</th>
+            </tr>
+          </thead>
+          <tbody id="planTableBody">
+            <tr><td colspan="17" class="plan-modal-loading">选择商品后加载数据...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

@@ -733,6 +733,92 @@ def ai_analyze():
         return jsonify({"error": f"AI分析请求失败: {str(e)}"}), 500
 
 
+# ── API: 推广计划详情（按商品ID查询wj_spbb_spandjh） ──
+@app.route('/api/plan_detail')
+@login_required
+def api_plan_detail():
+    prod_id = request.args.get('prod_id', '')
+    if not prod_id:
+        return jsonify({"error": "缺少prod_id参数"}), 400
+
+    days_param = request.args.get('days', '7')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+
+    if date_from and date_to:
+        date_filter = f"\"日期\" >= '{date_from}'::date AND \"日期\" < ('{date_to}'::date + INTERVAL '1 day')"
+    elif days_param == 'yesterday':
+        date_filter = "\"日期\" = CURRENT_DATE - INTERVAL '1 day'"
+    else:
+        days = int(days_param)
+        date_filter = f"\"日期\" >= CURRENT_DATE - INTERVAL '{days} days'"
+
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(f"""
+        SELECT
+            t."计划id",
+            t."计划名字",
+            COALESCE(SUM(t."展现量"), 0) AS impressions,
+            COALESCE(SUM(t."点击量"), 0) AS clicks,
+            COALESCE(SUM(t."花费"), 0) AS cost,
+            COALESCE(SUM(t."直接成交金额"), 0) AS direct_amount,
+            COALESCE(SUM(t."总成交金额"), 0) AS total_amount,
+            COALESCE(SUM(t."直接购物车数"), 0) AS direct_cart,
+            COALESCE(SUM(t."总购物车数"), 0) AS total_cart,
+            COALESCE(SUM(t."引导访问潜客数"), 0) AS potential_visitors,
+            COALESCE(SUM(t."引导访问人数"), 0) AS guided_visitors,
+            COALESCE(SUM(t."旺旺咨询量"), 0) AS consultations,
+            (
+                SELECT s."场景id" FROM wj_spbb_spandjh s
+                WHERE s."计划id" = t."计划id"
+                  AND s."主体id" = %s
+                  AND {date_filter}
+                ORDER BY s."日期" DESC NULLS LAST
+                LIMIT 1
+            ) AS scene_id
+        FROM wj_spbb_spandjh t
+        WHERE t."主体id" = %s AND {date_filter}
+        GROUP BY t."计划id", t."计划名字"
+        ORDER BY COALESCE(SUM(t."花费"), 0) DESC
+    """, (prod_id, prod_id,))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+
+    result = []
+    for r in rows:
+        clicks = float(r['clicks'])
+        cost = float(r['cost'])
+        dcart = float(r['direct_cart'])
+        tcart = float(r['total_cart'])
+        consult = float(r['consultations'])
+        pv = float(r['potential_visitors'])
+        gv = float(r['guided_visitors'])
+
+        result.append({
+            "plan_id": int(r['计划id']),
+            "scene_id": r['scene_id'] if r['scene_id'] is not None else None,
+            "plan_name": r['计划名字'],
+            "impressions": int(r['impressions']),
+            "clicks": int(r['clicks']),
+            "cost": round(cost, 2),
+            "direct_amount": round(float(r['direct_amount']), 2),
+            "total_amount": round(float(r['total_amount']), 2),
+            "avg_click_cost": round(cost / clicks, 2) if clicks > 0 else 0,
+            "direct_cart": int(dcart),
+            "direct_cart_cost": round(cost / dcart, 2) if dcart > 0 else 0,
+            "total_cart": int(tcart),
+            "total_cart_cost": round(cost / tcart, 2) if tcart > 0 else 0,
+            "direct_amount_2": round(float(r['direct_amount']), 2),
+            "total_amount_2": round(float(r['total_amount']), 2),
+            "visitor_ratio": round(pv / gv * 100, 2) if gv > 0 else 0,
+            "consultations": int(consult),
+            "consult_cost": round(cost / consult, 2) if consult > 0 else 0,
+        })
+
+    return jsonify(result)
+
+
 # ── 启动 ──
 if __name__ == '__main__':
     print("=" * 50)
