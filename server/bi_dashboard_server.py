@@ -857,6 +857,38 @@ def api_product_list():
         LIMIT %s OFFSET %s
     """, params + [page_size, offset])
     rows = cur.fetchall()
+
+    # ── 批量获取商品梯队 ──
+    prod_ids = [r['商品ID'] for r in rows]
+    tier_map = {}
+    if prod_ids:
+        placeholders = ','.join(['%s'] * len(prod_ids))
+        cur.execute(f'SELECT "商品id", "商品梯队" FROM products_remarks WHERE "商品id" IN ({placeholders})', prod_ids)
+        for tr in cur.fetchall():
+            tier_map[tr['商品id']] = tr['商品梯队']
+
+    # ── 批量获取推广状态（近7天） ──
+    promo_map = {}
+    if prod_ids:
+        placeholders = ','.join(['%s'] * len(prod_ids))
+        cur.execute(f"""
+            SELECT "主体id",
+                   COALESCE(SUM("花费"), 0) AS total_cost,
+                   ARRAY_AGG(DISTINCT "场景名字") AS scene_names
+            FROM wj_spbb_spandjh
+            WHERE "主体id" IN ({placeholders})
+              AND "日期" >= CURRENT_DATE - INTERVAL '7 days'
+            GROUP BY "主体id"
+        """, prod_ids)
+        for pr in cur.fetchall():
+            pid = str(pr['主体id'])
+            cost = float(pr['total_cost'])
+            if cost > 0:
+                scenes = list(filter(None, pr['scene_names'] or []))
+                promo_map[pid] = '/'.join(scenes)
+            else:
+                promo_map[pid] = '未推广'
+
     cur.close(); conn.close()
 
     return jsonify({
@@ -871,8 +903,40 @@ def api_product_list():
             "model": r['商家编码'],
             "category": r['类目名称'],
             "created_at": str(r['创建时间'])[:19] if r['创建时间'] else '',
+            "tier": tier_map.get(r['商品ID'], ''),
+            "promotion_status": promo_map.get(r['商品ID'], '未推广'),
         } for r in rows]
     })
+
+
+# ── API: 设置商品梯队（UPSERT products_remarks） ──
+@app.route('/api/product/set_tier', methods=['POST'])
+@login_required
+def api_set_product_tier():
+    data = request.get_json(silent=True) or {}
+    prod_id = data.get('prod_id', '').strip()
+    tier = data.get('tier', '').strip()
+    if not prod_id:
+        return jsonify({"error": "缺少prod_id参数"}), 400
+    if not tier:
+        return jsonify({"error": "请填写商品梯队"}), 400
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO products_remarks ("商品id", "商品梯队")
+            VALUES (%s, %s)
+            ON CONFLICT ("商品id")
+            DO UPDATE SET "商品梯队" = EXCLUDED."商品梯队"
+        """, (prod_id, tier))
+        conn.commit()
+        return jsonify({"ok": True, "message": f"商品 {prod_id} 梯队已设置为「{tier}」"})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"保存失败: {str(e)}"}), 500
+    finally:
+        cur.close(); conn.close()
 
 
 # ── 启动 ──
