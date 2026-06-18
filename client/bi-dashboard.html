@@ -465,6 +465,21 @@
     .cost-ratio-highlight.selected-row:hover td.sticky-col {
       background: #3d2020 !important;
     }
+    /* ── 推广计划详情弹窗粘性列 + 行选中 ── */
+    .plan-modal-box .prod-table-wrap .data-table .plan-sticky-col {
+      position: sticky;
+      z-index: 1;
+      background: var(--bg-card);
+    }
+    .plan-modal-box .prod-table-wrap .data-table .plan-sticky-col.sticky-header {
+      z-index: 3;
+    }
+    .plan-modal-box .prod-table-wrap .data-table tr.plan-selected-row td {
+      background: #1a2a40 !important;
+    }
+    .plan-modal-box .prod-table-wrap .data-table tr.plan-selected-row td.plan-sticky-col {
+      background: #1a2a40 !important;
+    }
 
     .rank-badge {
       display: inline-flex;
@@ -2534,9 +2549,9 @@ function renderPlanTable() {
       ? '<a href="https://one.alimama.com/index.html#!/manage/' + scenePath + '?offset=0&searchKey=campaignId&searchValue=' + p.plan_id + '" target="_blank" style="color:var(--accent-cyan);text-decoration:none;cursor:pointer" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">' + p.plan_id + '</a>'
       : p.plan_id;
 
-    return '<tr>' +
-      '<td style="font-family:monospace;font-size:11px">' + planIdHtml + '</td>' +
-      '<td>' + (p.plan_name || '-') + '</td>' +
+    return '<tr onclick="selectPlanRow(this)">' +
+      '<td class="plan-sticky-col" style="left:0;font-family:monospace;font-size:11px">' + planIdHtml + '</td>' +
+      '<td class="plan-sticky-col" style="left:0">' + (p.plan_name || '-') + '</td>' +
       '<td style="text-align:right;font-family:monospace">' + p.impressions.toLocaleString() + '</td>' +
       '<td style="text-align:right;font-family:monospace">' + p.clicks.toLocaleString() + '</td>' +
       '<td class="money-col">¥' + p.cost.toFixed(2) + '</td>' +
@@ -2588,6 +2603,33 @@ function renderPlanTable() {
   html += '<span class="page-info">共 ' + planData.length + ' 条</span>';
 
   pagination.innerHTML = html;
+  calcPlanStickyOffsets();
+}
+
+function selectPlanRow(row) {
+  document.querySelectorAll('.plan-modal-box .data-table tbody tr.plan-selected-row')
+    .forEach(r => r.classList.remove('plan-selected-row'));
+  row.classList.add('plan-selected-row');
+}
+
+function calcPlanStickyOffsets() {
+  const table = document.querySelector('.plan-modal-box .prod-table-wrap .data-table');
+  if (!table) return;
+  const headerRow = table.querySelector('thead tr');
+  if (!headerRow) return;
+  const cells = headerRow.querySelectorAll('.plan-sticky-col');
+  let offset = 0;
+  cells.forEach((th) => {
+    const w = th.offsetWidth;
+    th.style.left = offset + 'px';
+    // 同步所有数据行的同列 td
+    const idx = Array.from(th.parentNode.children).indexOf(th);
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      const td = tr.children[idx];
+      if (td) td.style.left = offset + 'px';
+    });
+    offset += w;
+  });
 }
 
 async function loadPlanDetail() {
@@ -2659,7 +2701,8 @@ window.addEventListener('resize', calcTgStickyOffsets);
         <table class="data-table">
           <thead>
             <tr>
-              <th>计划ID</th><th>计划名称</th><th>展现量</th><th>点击量</th><th>花费</th>
+              <th class="plan-sticky-col sticky-header" style="left:0">计划ID</th>
+              <th class="plan-sticky-col sticky-header" style="left:0">计划名称</th><th>展现量</th><th>点击量</th><th>花费</th>
               <th>直接成交金额</th><th>总成交金额</th><th>平均点击花费</th><th>直接购物车数</th>
               <th>直接加购成本</th><th>总购物车数</th><th>总加购成本</th><th>直接成交金额</th>
               <th>总成交金额</th><th>引导访问潜客占比</th><th>旺旺咨询量</th><th>咨询成本</th>
