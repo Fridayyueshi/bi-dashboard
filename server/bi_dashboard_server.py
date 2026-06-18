@@ -819,6 +819,62 @@ def api_plan_detail():
     return jsonify(result)
 
 
+# ── API: 商品列表详情（从products表翻页查询） ──
+@app.route('/api/product_list')
+@login_required
+def api_product_list():
+    page = request.args.get('page', 1, type=int)
+    page_size = request.args.get('page_size', 10, type=int)
+    search_id = request.args.get('search_id', '').strip()
+    search_name = request.args.get('search_name', '').strip()
+
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # 构建WHERE条件
+    conditions = []
+    params = []
+    if search_id:
+        conditions.append('"商品ID" = %s')
+        params.append(search_id)
+    if search_name:
+        conditions.append('"商品名称" = %s')
+        params.append(search_name)
+    where_clause = ' AND '.join(conditions) if conditions else 'TRUE'
+
+    # 总条数
+    cur.execute(f'SELECT COUNT(*) AS total FROM products WHERE {where_clause}', params)
+    total = cur.fetchone()['total']
+
+    # 分页数据
+    offset = (page - 1) * page_size
+    cur.execute(f"""
+        SELECT "商品ID", "商品名称", "商品状态", "商品图片", "商家编码",
+               "类目名称", "创建时间"
+        FROM products
+        WHERE {where_clause}
+        ORDER BY "创建时间" DESC NULLS LAST
+        LIMIT %s OFFSET %s
+    """, params + [page_size, offset])
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+
+    return jsonify({
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "data": [{
+            "prod_id": r['商品ID'],
+            "title": r['商品名称'],
+            "status": r['商品状态'],
+            "image": r['商品图片'] or '',
+            "model": r['商家编码'],
+            "category": r['类目名称'],
+            "created_at": str(r['创建时间'])[:19] if r['创建时间'] else '',
+        } for r in rows]
+    })
+
+
 # ── 启动 ──
 if __name__ == '__main__':
     print("=" * 50)

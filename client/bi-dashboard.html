@@ -480,6 +480,10 @@
     .plan-modal-box .prod-table-wrap .data-table tr.plan-selected-row td.plan-sticky-col {
       background: #1a2a40 !important;
     }
+    /* ── 商品列表明细行选中 ── */
+    #page-shangpinliebiao .data-table tbody tr.pl-selected-row td {
+      background: #1a2a40 !important;
+    }
 
     .rank-badge {
       display: inline-flex;
@@ -1315,8 +1319,36 @@
       <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">商品数据模块开发中...</div></div>
     </div>
     <div id="page-shangpinliebiao" class="page">
-      <div class="section-title">📋 商品列表</div>
-      <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">商品列表模块开发中...</div></div>
+      <div class="section-title">📋 商品列表明细</div>
+      <div class="card">
+        <div class="card-body">
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
+            <input type="text" id="plSearchId" placeholder="搜索商品ID..." style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:160px;font-family:monospace">
+            <input type="text" id="plSearchName" placeholder="搜索商品名称..." style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:200px">
+            <button class="confirm-btn" onclick="plSearch()">搜索</button>
+            <button class="confirm-btn" style="background:var(--bg-card-hover)" onclick="plReset()">重置</button>
+          </div>
+          <div class="prod-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>商品ID</th>
+                  <th>商品名称</th>
+                  <th>商品状态</th>
+                  <th>商品图片</th>
+                  <th>商家编码</th>
+                  <th>类目名称</th>
+                  <th>创建时间</th>
+                </tr>
+              </thead>
+              <tbody id="plTableBody">
+                <tr><td colspan="7" class="prod-table-loading">加载中...</td></tr>
+              </tbody>
+            </table>
+            <div class="pd-pagination" id="plPagination" style="justify-content:center;padding:10px 0"></div>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="page-tuiguangshuju" class="page">
       <div class="section-title">📢 推广数据概况</div>
@@ -2404,6 +2436,99 @@ async function pdAiAnalyze() {
   }
 }
 
+// ── 商品列表明细（独立模块，从products表翻页查询） ──
+let plPage = 1;
+let plTotal = 0;
+const PL_PAGE_SIZE = 10;
+
+async function plLoadData() {
+  const tbody = document.getElementById('plTableBody');
+  const pagination = document.getElementById('plPagination');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" class="prod-table-loading">加载中...</td></tr>';
+  pagination.innerHTML = '';
+
+  try {
+    const searchId = document.getElementById('plSearchId').value.trim();
+    const searchName = document.getElementById('plSearchName').value.trim();
+    let url = '/api/product_list?page=' + plPage + '&page_size=' + PL_PAGE_SIZE;
+    if (searchId) url += '&search_id=' + encodeURIComponent(searchId);
+    if (searchName) url += '&search_name=' + encodeURIComponent(searchName);
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const result = await res.json();
+    plTotal = result.total;
+    const data = result.data;
+
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">暂无数据</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(p => {
+      const imgHtml = p.image
+        ? '<img src="' + p.image + '" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:4px" onerror="this.style.display=\'none\'" loading="lazy">'
+        : '<span style="color:var(--text-muted);font-size:11px">无图片</span>';
+      return '<tr onclick="plSelectRow(this)">' +
+        '<td style="font-family:monospace;font-size:11px">' + (p.prod_id || '-') + '</td>' +
+        '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (p.title || '').replace(/"/g,'&quot;') + '">' + (p.title || '-') + '</td>' +
+        '<td>' + (p.status || '-') + '</td>' +
+        '<td>' + imgHtml + '</td>' +
+        '<td style="font-family:monospace;font-size:11px">' + (p.model || '-') + '</td>' +
+        '<td>' + (p.category || '-') + '</td>' +
+        '<td style="font-family:monospace;font-size:11px">' + (p.created_at || '-') + '</td>' +
+        '</tr>';
+    }).join('');
+
+    // 翻页
+    const totalPages = Math.ceil(plTotal / PL_PAGE_SIZE);
+    if (totalPages <= 1) {
+      pagination.innerHTML = '';
+      return;
+    }
+    let html = '';
+    html += '<button class="page-btn" onclick="plPage--;plLoadData()" ' + (plPage <= 1 ? 'disabled' : '') + '>‹</button>';
+    let startPage = Math.max(1, plPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+    if (startPage > 1) {
+      html += '<button class="page-btn" onclick="plPage=1;plLoadData()">1</button>';
+      if (startPage > 2) html += '<span class="page-info" style="font-size:12px">…</span>';
+    }
+    for (let i = startPage; i <= endPage; i++) {
+      html += '<button class="page-btn' + (i === plPage ? ' active' : '') + '" onclick="plPage=' + i + ';plLoadData()">' + i + '</button>';
+    }
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) html += '<span class="page-info" style="font-size:12px">…</span>';
+      html += '<button class="page-btn" onclick="plPage=' + totalPages + ';plLoadData()">' + totalPages + '</button>';
+    }
+    html += '<button class="page-btn" onclick="plPage++;plLoadData()" ' + (plPage >= totalPages ? 'disabled' : '') + '>›</button>';
+    html += '<span class="page-info">共 ' + plTotal + ' 条</span>';
+    pagination.innerHTML = html;
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--accent-red)">加载失败: ' + e.message + '</td></tr>';
+  }
+}
+
+function plSearch() {
+  plPage = 1;
+  plLoadData();
+}
+
+function plReset() {
+  document.getElementById('plSearchId').value = '';
+  document.getElementById('plSearchName').value = '';
+  plPage = 1;
+  plLoadData();
+}
+
+function plSelectRow(row) {
+  document.querySelectorAll('#page-shangpinliebiao .data-table tbody tr.pl-selected-row')
+    .forEach(r => r.classList.remove('pl-selected-row'));
+  row.classList.add('pl-selected-row');
+}
+
 // ── 页面切换 ──
 function switchPage(name) {
   // 隐藏所有页面
@@ -2419,6 +2544,7 @@ function switchPage(name) {
   if (name === 'jingyingzonglan') loadAll();
   if (name === 'shangpinshuju') loadProductData();
   if (name === 'tuiguangshuju') tgLoadData();
+  if (name === 'shangpinliebiao') plLoadData();
 }
 
 // ── 加载全部 ──
