@@ -1341,11 +1341,12 @@
                   <th>类目名称</th>
                   <th title="根据近7天的推广花费">推广状态</th>
                   <th>创建时间</th>
+                  <th>负责人</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody id="plTableBody">
-                <tr><td colspan="10" class="prod-table-loading">加载中...</td></tr>
+                <tr><td colspan="11" class="prod-table-loading">加载中...</td></tr>
               </tbody>
             </table>
             <div class="pd-pagination" id="plPagination" style="justify-content:center;padding:10px 0"></div>
@@ -2465,7 +2466,7 @@ async function plLoadData() {
     const data = result.data;
 
     if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted)">暂无数据</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--text-muted)">暂无数据</td></tr>';
       return;
     }
 
@@ -2485,6 +2486,11 @@ async function plLoadData() {
         ? '<span style="font-size:12px">' + p.tier + '</span>'
         : '<span style="color:var(--text-muted);font-size:11px">-</span>';
 
+      // 负责人显示
+      const managerHtml = p.manager_name
+        ? '<span style="font-size:12px">' + p.manager_name + '</span>'
+        : '<span style="color:var(--text-muted);font-size:11px">-</span>';
+
       return '<tr onclick="plSelectRow(this)">' +
         '<td style="font-family:monospace;font-size:11px">' + (p.prod_id || '-') + '</td>' +
         '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (p.title || '').replace(/"/g,'&quot;') + '">' + (p.title || '-') + '</td>' +
@@ -2495,7 +2501,11 @@ async function plLoadData() {
         '<td>' + (p.category || '-') + '</td>' +
         '<td style="text-align:center">' + promoHtml + '</td>' +
         '<td style="font-family:monospace;font-size:11px">' + (p.created_at || '-') + '</td>' +
-        '<td style="text-align:center"><button class="confirm-btn" style="padding:3px 10px;font-size:12px" onclick="event.stopPropagation();openTierModal(\'' + (p.prod_id || '') + '\',\'' + (p.tier || '').replace(/'/g,"\\'") + '\')">设置梯队</button></td>' +
+        '<td style="text-align:center">' + managerHtml + '</td>' +
+        '<td style="text-align:center;white-space:nowrap">' +
+          '<button class="confirm-btn" style="padding:3px 10px;font-size:12px;margin-right:4px" onclick="event.stopPropagation();openTierModal(\'' + (p.prod_id || '') + '\',\'' + (p.tier || '').replace(/'/g,"\\'") + '\')">设置梯队</button>' +
+          '<button class="confirm-btn" style="padding:3px 10px;font-size:12px;background:var(--accent-cyan)" onclick="event.stopPropagation();openManagerModal(\'' + (p.prod_id || '') + '\',\'' + (p.manager_id || '') + '\')">设置负责人</button>' +
+        '</td>' +
         '</tr>';
     }).join('');
 
@@ -2525,7 +2535,7 @@ async function plLoadData() {
     html += '<span class="page-info">共 ' + plTotal + ' 条</span>';
     pagination.innerHTML = html;
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--accent-red)">加载失败: ' + e.message + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--accent-red)">加载失败: ' + e.message + '</td></tr>';
   }
 }
 
@@ -2856,6 +2866,63 @@ async function submitTier() {
   }
 }
 
+// ── 设置商品负责人弹窗 ──
+let managerProdId = '';
+let managerUsers = [];
+
+async function openManagerModal(prodId, currentUserId) {
+  managerProdId = prodId;
+  document.getElementById('managerProdId').textContent = '商品: ' + prodId;
+  document.getElementById('managerModal').classList.remove('hidden');
+
+  // 加载用户列表
+  const select = document.getElementById('managerSelect');
+  select.innerHTML = '<option value="">加载中...</option>';
+  select.disabled = true;
+
+  try {
+    const res = await fetch('/api/users/list');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    managerUsers = await res.json();
+    select.innerHTML = '<option value="">— 不设置 —</option>' +
+      managerUsers.map(u =>
+        '<option value="' + u.id + '"' + (String(u.id) === String(currentUserId) ? ' selected' : '') + '>' +
+        u.username + '</option>'
+      ).join('');
+    select.disabled = false;
+  } catch (e) {
+    select.innerHTML = '<option value="">加载失败: ' + e.message + '</option>';
+  }
+}
+
+function closeManagerModal() {
+  document.getElementById('managerModal').classList.add('hidden');
+}
+
+async function submitManager() {
+  const user_id = document.getElementById('managerSelect').value;
+  const btn = document.getElementById('managerSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = '保存中...';
+
+  try {
+    const res = await fetch('/api/product/set_manager', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prod_id: managerProdId, user_id: user_id }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || '保存失败');
+    closeManagerModal();
+    plLoadData();
+  } catch (e) {
+    document.getElementById('managerError').textContent = '❌ ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '确定';
+  }
+}
+
 // ── 启动：先检查登录状态 ──
 checkSession();
 window.addEventListener('resize', calcTgStickyOffsets);
@@ -2924,6 +2991,30 @@ window.addEventListener('resize', calcTgStickyOffsets);
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button class="confirm-btn" style="background:var(--bg-card-hover)" onclick="closeTierModal()">取消</button>
         <button class="confirm-btn" id="tierSubmitBtn" onclick="submitTier()">确定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 设置商品负责人弹窗 ── -->
+<div class="plan-modal-overlay hidden" id="managerModal">
+  <div class="plan-modal-box" style="max-width:420px">
+    <div class="plan-modal-header">
+      <span>👤 设置商品负责人 <span id="managerProdId" style="color:var(--accent-cyan);font-family:monospace"></span></span>
+      <button class="plan-modal-close" onclick="closeManagerModal()">✕</button>
+    </div>
+    <div class="plan-modal-body" style="padding:24px">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;color:var(--text-secondary);margin-bottom:6px">选择负责人</label>
+        <select id="managerSelect"
+                style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:14px;cursor:pointer">
+          <option value="">加载中...</option>
+        </select>
+      </div>
+      <div id="managerError" style="color:var(--accent-red);font-size:12px;margin-bottom:12px;min-height:18px"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="confirm-btn" style="background:var(--bg-card-hover)" onclick="closeManagerModal()">取消</button>
+        <button class="confirm-btn" id="managerSubmitBtn" onclick="submitManager()">确定</button>
       </div>
     </div>
   </div>

@@ -858,14 +858,28 @@ def api_product_list():
     """, params + [page_size, offset])
     rows = cur.fetchall()
 
-    # ── 批量获取商品梯队 ──
+    # ── 批量获取商品梯队 + 负责人 ──
     prod_ids = [r['商品ID'] for r in rows]
     tier_map = {}
+    manager_map = {}  # prod_id -> manager_id (负责人)
+    manager_ids = set()
     if prod_ids:
         placeholders = ','.join(['%s'] * len(prod_ids))
-        cur.execute(f'SELECT "商品id", "商品梯队" FROM products_remarks WHERE "商品id" IN ({placeholders})', prod_ids)
+        cur.execute(f'SELECT "商品id", "商品梯队", "负责人" FROM products_remarks WHERE "商品id" IN ({placeholders})', prod_ids)
         for tr in cur.fetchall():
             tier_map[tr['商品id']] = tr['商品梯队']
+            if tr['负责人']:
+                manager_map[tr['商品id']] = tr['负责人']
+                manager_ids.add(tr['负责人'])
+    
+    # ── 批量获取负责人名称（仅is_active=true） ──
+    manager_name_map = {}
+    if manager_ids:
+        id_list = list(manager_ids)
+        placeholders = ','.join(['%s'] * len(id_list))
+        cur.execute(f'SELECT id, username FROM bi_users WHERE id IN ({placeholders}) AND is_active = true', id_list)
+        for u in cur.fetchall():
+            manager_name_map[str(u['id'])] = u['username']
 
     # ── 批量获取推广状态（近7天） ──
     promo_map = {}
@@ -905,6 +919,8 @@ def api_product_list():
             "created_at": str(r['创建时间'])[:19] if r['创建时间'] else '',
             "tier": tier_map.get(r['商品ID'], ''),
             "promotion_status": promo_map.get(r['商品ID'], '未推广'),
+            "manager_id": manager_map.get(r['商品ID'], ''),
+            "manager_name": manager_name_map.get(manager_map.get(r['商品ID'], ''), ''),
         } for r in rows]
     })
 
@@ -932,6 +948,50 @@ def api_set_product_tier():
         """, (prod_id, tier))
         conn.commit()
         return jsonify({"ok": True, "message": f"商品 {prod_id} 梯队已设置为「{tier}」"})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"保存失败: {str(e)}"}), 500
+    finally:
+        cur.close(); conn.close()
+
+
+# ── API: 获取用户列表（供下拉框使用） ──
+@app.route('/api/users/list')
+@login_required
+def api_users_list():
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute('SELECT id, username, display_name FROM bi_users WHERE is_active = true ORDER BY id')
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return jsonify([{
+        "id": r['id'],
+        "username": r['username'],
+        "display_name": r['display_name'] or r['username'],
+    } for r in rows])
+
+
+# ── API: 设置商品负责人（UPSERT products_remarks） ──
+@app.route('/api/product/set_manager', methods=['POST'])
+@login_required
+def api_set_product_manager():
+    data = request.get_json(silent=True) or {}
+    prod_id = data.get('prod_id', '').strip()
+    user_id = data.get('user_id', '').strip()
+    if not prod_id:
+        return jsonify({"error": "缺少prod_id参数"}), 400
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO products_remarks ("商品id", "商品梯队", "负责人")
+            VALUES (%s, COALESCE((SELECT "商品梯队" FROM products_remarks WHERE "商品id" = %s), ''), %s)
+            ON CONFLICT ("商品id")
+            DO UPDATE SET "负责人" = EXCLUDED."负责人"
+        """, (prod_id, prod_id, user_id if user_id else None))
+        conn.commit()
+        return jsonify({"ok": True, "message": f"商品 {prod_id} 负责人已设置"})
     except Exception as e:
         conn.rollback()
         return jsonify({"error": f"保存失败: {str(e)}"}), 500
