@@ -999,6 +999,58 @@ def api_set_product_manager():
         cur.close(); conn.close()
 
 
+# ── API: 咨询概况（总咨询数 + top10商品） ──
+@app.route('/api/consultation_overview')
+@login_required
+def api_consultation_overview():
+    days_param = request.args.get('days', '7')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+
+    if date_from and date_to:
+        date_filter = f"pc.\"日期\" >= '{date_from}'::date AND pc.\"日期\" < ('{date_to}'::date + INTERVAL '1 day')"
+    elif days_param == 'yesterday':
+        date_filter = "pc.\"日期\" = CURRENT_DATE - INTERVAL '1 day'"
+    else:
+        days = int(days_param)
+        date_filter = f"pc.\"日期\" >= CURRENT_DATE - INTERVAL '{days} days'"
+
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # 总咨询人数
+    cur.execute(f"""
+        SELECT COALESCE(SUM(pc.\"总咨询人数\"), 0) AS total_consultations
+        FROM product_consultation pc
+        WHERE {date_filter}
+    """)
+    total = cur.fetchone()['total_consultations']
+
+    # TOP10咨询商品（含图片）
+    cur.execute(f"""
+        SELECT pc.\"商品id\", pc.\"商品名称\", COALESCE(SUM(pc.\"总咨询人数\"), 0) AS consult_count,
+               p.\"商品图片\"
+        FROM product_consultation pc
+        LEFT JOIN products p ON pc.\"商品id\"::text = p.\"商品ID\"
+        WHERE {date_filter}
+        GROUP BY pc.\"商品id\", pc.\"商品名称\", p.\"商品图片\"
+        ORDER BY consult_count DESC
+        LIMIT 10
+    """)
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+
+    return jsonify({
+        "total_consultations": int(total),
+        "top_products": [{
+            "prod_id": r['商品id'],
+            "title": r['商品名称'],
+            "consult_count": int(r['consult_count']),
+            "image": r['商品图片'] or '',
+        } for r in rows]
+    })
+
+
 # ── 启动 ──
 if __name__ == '__main__':
     print("=" * 50)

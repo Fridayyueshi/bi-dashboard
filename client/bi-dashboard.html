@@ -972,6 +972,39 @@
     .plan-modal-body .date-range { margin-bottom: 12px; }
     .plan-modal-loading { text-align: center; padding: 40px; color: var(--text-muted); }
     .pd-date-picker.show { display: inline-flex; }
+    /* ── 咨询商品列表 ── */
+    .cs-product-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .cs-product-row:last-child { border-bottom: none; }
+    .cs-product-rank {
+      width: 24px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .cs-product-rank.top1 { color: var(--accent-orange); }
+    .cs-product-rank.top2 { color: #c0c0c0; }
+    .cs-product-rank.top3 { color: #cd7f32; }
+    .cs-product-info {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+    .cs-product-count {
+      flex-shrink: 0;
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--accent-cyan);
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -1201,63 +1234,21 @@
     </div>
   </div>
 
-  <!-- ═══ 趋势图 + 推广花费趋势 ═══ -->
+  <!-- ═══ 咨询概况 ═══ -->
+  <div class="section-title">💬 咨询概况</div>
   <div class="grid-2">
-    <!-- 日净销售额趋势 -->
     <div class="card">
       <div class="card-header">
-        <div class="card-title">日净销售额趋势</div>
-        <span class="tag tag-new" id="trendTag">近7天</span>
+        <div class="card-title">咨询商品TOP10</div>
+        <span class="tag tag-new">按咨询量排序</span>
       </div>
-      <div class="card-body">
-        <div class="chart-container">
-          <div class="bar-chart" id="trendChart"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 推广花费趋势 -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">推广花费趋势</div>
-        <select id="adSceneFilter" onchange="loadAdTrend()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:12px;cursor:pointer">
-          <option value="">全部推广</option>
-          <option value="关键词推广">关键词推广</option>
-          <option value="人群推广">人群推广</option>
-          <option value="货品全站推广">全站推广</option>
-        </select>
-      </div>
-      <div class="card-body">
-        <div class="chart-container">
-          <div class="bar-chart" id="adTrendChart"></div>
-          <div class="chart-legend" id="adChartLegend" style="display:none">
-            <span class="legend-item"><span class="legend-dot" style="background:var(--accent-orange)"></span> 关键词推广</span>
-            <span class="legend-item"><span class="legend-dot" style="background:var(--accent-green)"></span> 人群推广</span>
-            <span class="legend-item"><span class="legend-dot" style="background:var(--accent-cyan)"></span> 全站推广</span>
-            <span class="legend-item"><span class="legend-dot" style="background:var(--accent-blue)"></span> 总花费</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ 竞品监控 + 商品排行 ═══ -->
-  <div class="grid-2">
-    <!-- 竞品监控 -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">竞品监控</div>
-        <span class="tag tag-hot">实时</span>
-      </div>
-      <div class="card-body" id="competitorTable">
+      <div class="card-body" id="csTopProducts">
         <div class="loading"><div class="spinner"></div>加载中...</div>
       </div>
     </div>
   </div>
 
-  <!-- ═══ 商品排行 + 流量来源 ═══ -->
-  <div class="grid-3">
-    <!-- 商品排行 -->
+  <!-- ═══ 商品排行 ═══ -->
     <div class="card">
       <div class="card-header">
         <div class="card-title">商品支付TOP10</div>
@@ -1266,42 +1257,6 @@
         <div class="loading"><div class="spinner"></div>加载中...</div>
       </div>
     </div>
-
-    <!-- 流量来源 -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">流量来源分布</div>
-      </div>
-      <div class="card-body" id="trafficTable">
-        <div class="loading"><div class="spinner"></div>加载中...</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ 关键词上升 + 无界报表概览 ═══ -->
-  <div class="grid-2">
-    <!-- 住宅家具关键词上升 -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">住宅家具关键词上升TOP10</div>
-        <span class="tag tag-hot">今日</span>
-      </div>
-      <div class="card-body" id="keywordsTable">
-        <div class="loading"><div class="spinner"></div>加载中...</div>
-      </div>
-    </div>
-
-    <!-- 无界报表概览 -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">无界报表数据概览</div>
-        <span class="tag tag-new">近7日</span>
-      </div>
-      <div class="card-body" id="reportsGrid">
-        <div class="loading"><div class="spinner"></div>加载中...</div>
-      </div>
-    </div>
-  </div>
 
     </div>  <!-- /page-jingyingzonglan -->
 
@@ -2557,6 +2512,55 @@ function plSelectRow(row) {
   row.classList.add('pl-selected-row');
 }
 
+// ── 咨询概况 ──
+async function loadConsultationOverview() {
+  const rangeVal = document.getElementById('timeRange').value;
+  const dateFrom = document.getElementById('overviewDateFrom').value;
+  const dateTo = document.getElementById('overviewDateTo').value;
+
+  let url = '/api/consultation_overview?';
+  if (rangeVal === 'custom' && dateFrom && dateTo) {
+    url += 'date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
+  } else {
+    url += 'days=' + (rangeVal === 'yesterday' ? 'yesterday' : rangeVal);
+  }
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    const container = document.getElementById('csTopProducts');
+    if (!data.top_products || !data.top_products.length) {
+      container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted)">暂无咨询数据</div>';
+      return;
+    }
+
+    // 总咨询人数摘要行
+    const totalRow = '<div style="display:flex;align-items:center;gap:12px;padding:6px 0 12px 0;border-bottom:1px solid var(--border);margin-bottom:4px">' +
+      '<span style="font-size:14px;font-weight:bold;color:var(--text-primary)">💬 总咨询人数</span>' +
+      '<span style="font-size:20px;font-weight:bold;color:var(--accent-cyan);font-family:monospace">' + data.total_consultations.toLocaleString() + '</span>' +
+      '<span style="font-size:12px;color:var(--text-muted)">人</span>' +
+      '</div>';
+
+    container.innerHTML = totalRow + data.top_products.map((p, i) => {
+      const rank = i + 1;
+      const rankClass = rank === 1 ? 'top1' : rank === 2 ? 'top2' : rank === 3 ? 'top3' : '';
+      const imgHtml = p.image
+        ? '<div class="prod-thumb-wrap"><img class="prod-thumb" src="' + p.image + '" alt="" onerror="this.style.display=\'none\'" loading="lazy"><img class="prod-thumb-zoom" src="' + p.image + '" alt=""></div>'
+        : '<div style="width:40px;height:40px;border-radius:4px;background:var(--bg-card-hover);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📦</div>';
+      return '<div class="cs-product-row">' +
+        '<div class="cs-product-rank ' + rankClass + '">' + rank + '</div>' +
+        imgHtml +
+        '<div class="cs-product-info" title="' + (p.title || '').replace(/"/g,'&quot;') + '">' + (p.title || '-') + '</div>' +
+        '<div class="cs-product-count">' + p.consult_count.toLocaleString() + '</div>' +
+        '</div>';
+    }).join('');
+  } catch(e) {
+    document.getElementById('csTopProducts').innerHTML = '<div style="text-align:center;padding:30px;color:var(--accent-red)">加载失败: ' + e.message + '</div>';
+  }
+}
+
 // ── 页面切换 ──
 function switchPage(name) {
   // 隐藏所有页面
@@ -2585,28 +2589,11 @@ async function loadAll() {
   const rangeVal = document.getElementById('timeRange').value;
   document.getElementById('dateRange').textContent = formatDateRange(rangeVal);
 
-  // 更新趋势图标签
-  const picker = document.getElementById('overviewDatePicker');
-  if (rangeVal === 'yesterday') {
-    document.getElementById('trendTag').textContent = '昨天';
-  } else if (rangeVal === 'custom') {
-    const df = document.getElementById('overviewDateFrom').value;
-    const dt = document.getElementById('overviewDateTo').value;
-    document.getElementById('trendTag').textContent = df + ' ~ ' + dt;
-  } else {
-    document.getElementById('trendTag').textContent = '近' + rangeVal + '天';
-  }
-
   await Promise.all([
     loadShopOverview(),
     loadKPI(),
-    loadTrend(),
-    loadAdTrend(),
-    loadCompetitor(),
+    loadConsultationOverview(),
     loadProductTop(),
-    loadTraffic(),
-    loadKeywords(),
-    loadReports(),
   ]);
 
   const now = new Date().toLocaleString('zh-CN');
