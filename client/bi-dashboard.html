@@ -2941,7 +2941,6 @@ function openTierModal(prodId, currentTier) {
   document.getElementById('tierProdId').textContent = '商品: ' + prodId;
   document.getElementById('tierInput').value = currentTier;
   document.getElementById('tierModal').classList.remove('hidden');
-  document.getElementById('tierInput').focus();
 }
 
 function closeTierModal() {
@@ -2949,9 +2948,9 @@ function closeTierModal() {
 }
 
 async function submitTier() {
-  const tier = document.getElementById('tierInput').value.trim();
+  const tier = document.getElementById('tierInput').value;
   if (!tier) {
-    document.getElementById('tierError').textContent = '请填写商品梯队';
+    document.getElementById('tierError').textContent = '请选择商品梯队';
     return;
   }
   const btn = document.getElementById('tierSubmitBtn');
@@ -3094,9 +3093,15 @@ window.addEventListener('resize', calcTgStickyOffsets);
     <div class="plan-modal-body" style="padding:24px">
       <div style="margin-bottom:16px">
         <label style="display:block;font-size:13px;color:var(--text-secondary);margin-bottom:6px">商品梯队</label>
-        <input type="text" id="tierInput" placeholder="请输入商品梯队（如：S/A/B/C）"
-               onkeydown="if(event.key==='Enter') submitTier()"
-               style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:14px;box-sizing:border-box;font-family:monospace">
+        <select id="tierInput"
+                style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:14px;box-sizing:border-box;cursor:pointer">
+          <option value="">— 请选择梯队 —</option>
+          <option value="S">S</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C(新品)">C(新品)</option>
+          <option value="放弃">放弃</option>
+        </select>
       </div>
       <div id="tierError" style="color:var(--accent-red);font-size:12px;margin-bottom:12px;min-height:18px"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
