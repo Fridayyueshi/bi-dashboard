@@ -1427,7 +1427,7 @@
                   <th class="money-col sortable-header" onclick="tgSortBy('ad_cost')">广告投入<span class="sort-arrow" id="tgArrowAd">↕</span></th>
                   <th class="money-col sortable-header" onclick="tgSortBy('seed_cost')">种菜投入<span class="sort-arrow" id="tgArrowSeed">↕</span></th>
                   <th class="money-col sortable-header" onclick="tgSortBy('total_cost')">商品总投入<span class="sort-arrow" id="tgArrowTotal">↕</span></th>
-                  <th>费比</th>
+                  <th class="sortable-header" onclick="tgSortBy('cost_ratio')">费比<span class="sort-arrow" id="tgArrowCostRatio">↕</span></th>
                   <th class="money-col sortable-header" onclick="tgSortBy('roi')">ROI<span class="sort-arrow" id="tgArrowRoi">↕</span></th>
                   <th class="money-col sortable-header" onclick="tgSortBy('pay_exposure')">付费曝光量<span class="sort-arrow" id="tgArrowExposure">↕</span></th>
                   <th class="money-col sortable-header" onclick="tgSortBy('pay_visitors')">付费访客数<span class="sort-arrow" id="tgArrowVisitors">↕</span></th>
@@ -2184,7 +2184,8 @@ function tgSortBy(field) {
     ad_cost: 'tgArrowAd', seed_cost: 'tgArrowSeed', total_cost: 'tgArrowTotal',
     roi: 'tgArrowRoi', pay_exposure: 'tgArrowExposure', pay_visitors: 'tgArrowVisitors',
     pay_direct_cart: 'tgArrowDcart', pay_total_cart: 'tgArrowTcart',
-    consultations: 'tgArrowConsult', pay_orders: 'tgArrowOrders'
+    consultations: 'tgArrowConsult', pay_orders: 'tgArrowOrders',
+    cost_ratio: 'tgArrowCostRatio'
   };
   Object.values(arrowMap).forEach(id => {
     const el = document.getElementById(id);
