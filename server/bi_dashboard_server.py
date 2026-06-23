@@ -827,52 +827,90 @@ def api_product_list():
     page_size = request.args.get('page_size', 10, type=int)
     search_id = request.args.get('search_id', '').strip()
     search_name = request.args.get('search_name', '').strip()
+    search_tier = request.args.get('search_tier', '').strip()
+    search_manager = request.args.get('search_manager', '').strip()
+    sort_field = request.args.get('sort_field', 'created_at')
+    sort_dir = request.args.get('sort_dir', 'desc')
 
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-    # 构建WHERE条件
-    conditions = []
+    # ── 动态 WHERE ──
+    conditions = ['TRUE']
     params = []
+    base_joins = 'LEFT JOIN products_remarks pr ON p."商品ID" = pr."商品id"'
+    extra_joins = []
+
     if search_id:
-        conditions.append('"商品ID" = %s')
+        conditions.append('p."商品ID" = %s')
         params.append(search_id)
     if search_name:
-        conditions.append('"商品名称" = %s')
+        conditions.append('p."商品名称" = %s')
         params.append(search_name)
-    where_clause = ' AND '.join(conditions) if conditions else 'TRUE'
+    if search_tier:
+        conditions.append('pr."商品梯队" = %s')
+        params.append(search_tier)
+    if search_manager:
+        extra_joins.append('LEFT JOIN bi_users u ON pr."负责人" = u.id::text AND u.is_active = true')
+        conditions.append('u.username ILIKE %s')
+        params.append(f'%{search_manager}%')
 
-    # 总条数
-    cur.execute(f'SELECT COUNT(*) AS total FROM products WHERE {where_clause}', params)
+    joins = base_joins + ' ' + ' '.join(extra_joins)
+    where_clause = ' AND '.join(conditions)
+
+    # ── 排序 ──
+    sort_map = {
+        'tier': 'pr."商品梯队"',
+        'created_at': 'p."创建时间"',
+        'promotion_status': 'COALESCE(pm.total_cost, 0)',
+    }
+    order_col = sort_map.get(sort_field, 'p."创建时间"')
+    order_dir = 'ASC' if sort_dir == 'asc' else 'DESC'
+
+    # 推广数据子查询（用于排序 + promo_map）
+    promo_subjoin = ('LEFT JOIN ('
+        'SELECT "主体id", COALESCE(SUM("花费"),0) AS total_cost, '
+        'ARRAY_AGG(DISTINCT "场景名字") AS scene_names '
+        'FROM wj_spbb_spandjh '
+        'WHERE "日期" >= CURRENT_DATE - INTERVAL \'7 days\' '
+        'GROUP BY "主体id"'
+    ') pm ON p."商品ID"::text = pm."主体id"')
+
+    # ── 总条数 ──
+    cur.execute(f'SELECT COUNT(*) AS total FROM products p {joins} WHERE {where_clause}', params)
     total = cur.fetchone()['total']
 
-    # 分页数据
+    # ── 分页数据 ──
     offset = (page - 1) * page_size
     cur.execute(f"""
-        SELECT "商品ID", "商品名称", "商品状态", "商品图片", "商家编码",
-               "类目名称", "创建时间"
-        FROM products
+        SELECT p."商品ID", p."商品名称", p."商品状态", p."商品图片", p."商家编码",
+               p."类目名称", p."创建时间",
+               pr."商品梯队", pr."负责人",
+               pm.total_cost, pm.scene_names
+        FROM products p
+        {joins}
+        {promo_subjoin}
         WHERE {where_clause}
-        ORDER BY "创建时间" DESC NULLS LAST
+        ORDER BY {order_col} {order_dir} NULLS LAST
         LIMIT %s OFFSET %s
     """, params + [page_size, offset])
     rows = cur.fetchall()
 
-    # ── 批量获取商品梯队 + 负责人 ──
+    # ── 组装返回数据 ──
     prod_ids = [r['商品ID'] for r in rows]
-    tier_map = {}
-    manager_map = {}  # prod_id -> manager_id (负责人)
+    promo_map = {}
     manager_ids = set()
-    if prod_ids:
-        placeholders = ','.join(['%s'] * len(prod_ids))
-        cur.execute(f'SELECT "商品id", "商品梯队", "负责人" FROM products_remarks WHERE "商品id" IN ({placeholders})', prod_ids)
-        for tr in cur.fetchall():
-            tier_map[tr['商品id']] = tr['商品梯队']
-            if tr['负责人']:
-                manager_map[tr['商品id']] = tr['负责人']
-                manager_ids.add(tr['负责人'])
-    
-    # ── 批量获取负责人名称（仅is_active=true） ──
+    for r in rows:
+        pid = r['商品ID']
+        cost = float(r['total_cost'] or 0)
+        if cost > 0:
+            scenes = list(filter(None, r['scene_names'] or []))
+            promo_map[pid] = '/'.join(scenes)
+        else:
+            promo_map[pid] = '未推广'
+        if r['负责人']:
+            manager_ids.add(r['负责人'])
+
     manager_name_map = {}
     if manager_ids:
         id_list = list(manager_ids)
@@ -881,29 +919,8 @@ def api_product_list():
         for u in cur.fetchall():
             manager_name_map[str(u['id'])] = u['username']
 
-    # ── 批量获取推广状态（近7天） ──
-    promo_map = {}
-    if prod_ids:
-        placeholders = ','.join(['%s'] * len(prod_ids))
-        cur.execute(f"""
-            SELECT "主体id",
-                   COALESCE(SUM("花费"), 0) AS total_cost,
-                   ARRAY_AGG(DISTINCT "场景名字") AS scene_names
-            FROM wj_spbb_spandjh
-            WHERE "主体id" IN ({placeholders})
-              AND "日期" >= CURRENT_DATE - INTERVAL '7 days'
-            GROUP BY "主体id"
-        """, prod_ids)
-        for pr in cur.fetchall():
-            pid = str(pr['主体id'])
-            cost = float(pr['total_cost'])
-            if cost > 0:
-                scenes = list(filter(None, pr['scene_names'] or []))
-                promo_map[pid] = '/'.join(scenes)
-            else:
-                promo_map[pid] = '未推广'
-
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
 
     return jsonify({
         "total": total,
@@ -917,10 +934,10 @@ def api_product_list():
             "model": r['商家编码'],
             "category": r['类目名称'],
             "created_at": str(r['创建时间'])[:19] if r['创建时间'] else '',
-            "tier": tier_map.get(r['商品ID'], ''),
+            "tier": r['商品梯队'] or '',
             "promotion_status": promo_map.get(r['商品ID'], '未推广'),
-            "manager_id": manager_map.get(r['商品ID'], ''),
-            "manager_name": manager_name_map.get(manager_map.get(r['商品ID'], ''), ''),
+            "manager_id": str(r['负责人']) if r['负责人'] else '',
+            "manager_name": manager_name_map.get(str(r['负责人']), '') if r['负责人'] else '',
         } for r in rows]
     })
 
