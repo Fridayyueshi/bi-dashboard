@@ -874,7 +874,7 @@ def api_product_list():
         'FROM wj_spbb_spandjh '
         'WHERE "日期" >= CURRENT_DATE - INTERVAL \'7 days\' '
         'GROUP BY "主体id"'
-    ') pm ON p."商品ID"::text = pm."主体id"')
+    ') pm ON p."商品ID" = pm."主体id"::text')
 
     # ── 总条数 ──
     cur.execute(f'SELECT COUNT(*) AS total FROM products p {joins} WHERE {where_clause}', params)
