@@ -474,6 +474,9 @@
     .plan-modal-box .prod-table-wrap .data-table tr.plan-selected-row td {
       background: #1a2a40 !important;
     }
+    .plan-modal-box .prod-table-wrap .data-table tr:hover td.plan-sticky-col {
+      background: var(--bg-card-hover);
+    }
     .plan-modal-box .prod-table-wrap .data-table tr.plan-selected-row td.plan-sticky-col {
       background: #1a2a40 !important;
     }
@@ -2879,7 +2882,7 @@ function openPlanDetail(prodId) {
   planPage = 1;
   document.getElementById('planModalProdId').textContent = '【商品: ' + prodId + '】';
   document.getElementById('planModal').classList.remove('hidden');
-  document.getElementById('planTableBody').innerHTML = '<tr><td colspan="17" class="plan-modal-loading">加载中...</td></tr>';
+  document.getElementById('planTableBody').innerHTML = '<tr><td colspan="19" class="plan-modal-loading">加载中...</td></tr>';
   document.getElementById('planPagination').innerHTML = '';
   loadPlanDetail();
 }
@@ -2919,7 +2922,7 @@ function renderPlanTable() {
   const totalPages = Math.ceil(planData.length / PLAN_PAGE_SIZE);
 
   if (!planData.length) {
-    tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:var(--text-muted)">暂无推广计划数据</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;padding:40px;color:var(--text-muted)">暂无推广计划数据</td></tr>';
     pagination.innerHTML = '';
     return;
   }
@@ -2947,6 +2950,8 @@ function renderPlanTable() {
     return '<tr onclick="selectPlanRow(this)">' +
       '<td class="plan-sticky-col" style="left:0;font-family:monospace;font-size:11px">' + planIdHtml + '</td>' +
       '<td class="plan-sticky-col" style="left:0">' + (p.plan_name || '-') + '</td>' +
+      '<td class="plan-sticky-col" style="left:0">' + (p.scene_name || '-') + '</td>' +
+      '<td class="plan-sticky-col" style="left:0;color:' + (p.visitor_ratio > 80 ? '#10b981' : '#ef4444') + ';font-weight:600">' + (p.visitor_ratio > 80 ? '拉新' : '收割') + '</td>' +
       '<td style="text-align:right;font-family:monospace">' + p.impressions.toLocaleString() + '</td>' +
       '<td style="text-align:right;font-family:monospace">' + p.clicks.toLocaleString() + '</td>' +
       '<td class="money-col">¥' + p.cost.toFixed(2) + '</td>' +
@@ -3030,7 +3035,7 @@ function calcPlanStickyOffsets() {
 async function loadPlanDetail() {
   const tbody = document.getElementById('planTableBody');
   if (!planCurrentProdId) return;
-  tbody.innerHTML = '<tr><td colspan="17" class="plan-modal-loading">加载中...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="19" class="plan-modal-loading">加载中...</td></tr>';
   document.getElementById('planPagination').innerHTML = '';
 
   try {
@@ -3042,11 +3047,11 @@ async function loadPlanDetail() {
       const dateFrom = document.getElementById('planDateFrom').value;
       const dateTo = document.getElementById('planDateTo').value;
       if (!dateFrom || !dateTo) {
-        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:var(--accent-red)">请选择开始日期和结束日期</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;padding:40px;color:var(--accent-red)">请选择开始日期和结束日期</td></tr>';
         return;
       }
       if (dateFrom > dateTo) {
-        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:var(--accent-red)">开始日期不能晚于结束日期</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;padding:40px;color:var(--accent-red)">开始日期不能晚于结束日期</td></tr>';
         return;
       }
       url += '&date_from=' + dateFrom + '&date_to=' + dateTo;
@@ -3059,7 +3064,7 @@ async function loadPlanDetail() {
     planData = await res.json();
     renderPlanTable();
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:40px;color:var(--accent-red)">加载失败: ' + e.message + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;padding:40px;color:var(--accent-red)">加载失败: ' + e.message + '</td></tr>';
   }
 }
 
@@ -3197,14 +3202,14 @@ window.addEventListener('resize', calcTgStickyOffsets);
           <thead>
             <tr>
               <th class="plan-sticky-col sticky-header" style="left:0">计划ID</th>
-              <th class="plan-sticky-col sticky-header" style="left:0">计划名称</th><th>展现量</th><th>点击量</th><th>花费</th>
+              <th class="plan-sticky-col sticky-header" style="left:0">计划名称</th><th class="plan-sticky-col sticky-header" style="left:0">场景名字</th><th class="plan-sticky-col sticky-header" style="left:0">计划类型</th><th>展现量</th><th>点击量</th><th>花费</th>
               <th>直接成交金额</th><th>总成交金额</th><th>平均点击花费</th><th>直接购物车数</th>
               <th>直接加购成本</th><th>总购物车数</th><th>总加购成本</th><th>直接成交金额</th>
               <th>总成交金额</th><th>引导访问潜客占比</th><th>旺旺咨询量</th><th>咨询成本</th>
             </tr>
           </thead>
           <tbody id="planTableBody">
-            <tr><td colspan="17" class="plan-modal-loading">选择商品后加载数据...</td></tr>
+            <tr><td colspan="19" class="plan-modal-loading">选择商品后加载数据...</td></tr>
           </tbody>
         </table>
         <div class="pd-pagination" id="planPagination" style="justify-content:center;padding:10px 0"></div>

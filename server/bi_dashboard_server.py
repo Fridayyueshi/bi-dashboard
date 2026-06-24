@@ -776,12 +776,20 @@ def api_plan_detail():
                   AND {date_filter}
                 ORDER BY s."日期" DESC NULLS LAST
                 LIMIT 1
-            ) AS scene_id
+            ) AS scene_id,
+            (
+                SELECT s2."场景名字" FROM wj_spbb_spandjh s2
+                WHERE s2."计划id" = t."计划id"
+                  AND s2."主体id" = %s
+                  AND {date_filter}
+                ORDER BY s2."日期" DESC NULLS LAST
+                LIMIT 1
+            ) AS scene_name
         FROM wj_spbb_spandjh t
         WHERE t."主体id" = %s AND {date_filter}
         GROUP BY t."计划id", t."计划名字"
         ORDER BY COALESCE(SUM(t."花费"), 0) DESC
-    """, (prod_id, prod_id,))
+    """, (prod_id, prod_id, prod_id,))
     rows = cur.fetchall()
     cur.close(); conn.close()
 
@@ -798,6 +806,7 @@ def api_plan_detail():
         result.append({
             "plan_id": int(r['计划id']),
             "scene_id": r['scene_id'] if r['scene_id'] is not None else None,
+            "scene_name": r['scene_name'] if r['scene_name'] is not None else '',
             "plan_name": r['计划名字'],
             "impressions": int(r['impressions']),
             "clicks": int(r['clicks']),
