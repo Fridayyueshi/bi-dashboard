@@ -477,6 +477,15 @@
     .plan-modal-box .prod-table-wrap .data-table tr:hover td.plan-sticky-col {
       background: var(--bg-card-hover);
     }
+    .plan-modal-box .prod-table-wrap .data-table th:nth-child(2),
+    .plan-modal-box .prod-table-wrap .data-table td:nth-child(2) {
+      width: 280px;
+      min-width: 280px;
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .plan-modal-box .prod-table-wrap .data-table tr.plan-selected-row td.plan-sticky-col {
       background: #1a2a40 !important;
     }
@@ -2318,7 +2327,7 @@ function renderTgTable() {
       leftRows += `<tr ${rowAttr}>
         <td style="font-family:monospace;font-size:11px"><a href="javascript:void(0)" onclick="openPlanDetail('${p.prod_id}')" style="color:var(--accent-cyan);text-decoration:none;cursor:pointer" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${p.prod_id || '-'}</a></td>
         <td>${p.status || '-'}</td>
-        <td><div class="prod-title-cell" title="${(p.title || '').replace(/"/g,'&quot;')}">${p.title || '-'}</div></td>
+        <td><div class="prod-title-cell" title="${(p.title || '').replace(/"/g,'&quot;')}"><a href="https://detail.tmall.com/item.htm?id=${p.prod_id}" target="_blank" style="color:var(--accent-cyan);text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${p.title || '-'}</a></div></td>
         <td style="font-family:monospace;font-size:11px">${p.model || '-'}</td>
         <td>${imgHtml}</td>
       </tr>`;
@@ -2880,7 +2889,7 @@ const PLAN_PAGE_SIZE = 15;
 function openPlanDetail(prodId) {
   planCurrentProdId = prodId;
   planPage = 1;
-  document.getElementById('planModalProdId').textContent = '【商品: ' + prodId + '】';
+  document.getElementById('planModalProdId').innerHTML = '【商品: <a href="https://detail.tmall.com/item.htm?id=' + prodId + '" target="_blank" style="color:var(--accent-cyan);text-decoration:none" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">' + prodId + '</a>】';
   document.getElementById('planModal').classList.remove('hidden');
   document.getElementById('planTableBody').innerHTML = '<tr><td colspan="19" class="plan-modal-loading">加载中...</td></tr>';
   document.getElementById('planPagination').innerHTML = '';
@@ -2949,7 +2958,7 @@ function renderPlanTable() {
 
     return '<tr onclick="selectPlanRow(this)">' +
       '<td class="plan-sticky-col" style="left:0;font-family:monospace;font-size:11px">' + planIdHtml + '</td>' +
-      '<td class="plan-sticky-col" style="left:0">' + (p.plan_name || '-') + '</td>' +
+      '<td class="plan-sticky-col" style="left:0" title="' + (p.plan_name || '').replace(/"/g,'&quot;') + '">' + (p.plan_name || '-') + '</td>' +
       '<td class="plan-sticky-col" style="left:0">' + (p.scene_name || '-') + '</td>' +
       '<td class="plan-sticky-col" style="left:0;color:' + (p.visitor_ratio > 80 ? '#10b981' : '#ef4444') + ';font-weight:600">' + (p.visitor_ratio > 80 ? '拉新' : '收割') + '</td>' +
       '<td style="text-align:right;font-family:monospace">' + p.impressions.toLocaleString() + '</td>' +
@@ -3003,7 +3012,7 @@ function renderPlanTable() {
   html += '<span class="page-info">共 ' + planData.length + ' 条</span>';
 
   pagination.innerHTML = html;
-  calcPlanStickyOffsets();
+  requestAnimationFrame(calcPlanStickyOffsets);
 }
 
 function selectPlanRow(row) {
@@ -3031,6 +3040,19 @@ function calcPlanStickyOffsets() {
     offset += w;
   });
 }
+
+// ── 初始化：窗口缩放重算粘性列偏移 ──
+(function() {
+  let added = false;
+  const orig = calcPlanStickyOffsets;
+  calcPlanStickyOffsets = function() {
+    orig.call(this);
+    if (!added) {
+      window.addEventListener('resize', orig);
+      added = true;
+    }
+  };
+})();
 
 async function loadPlanDetail() {
   const tbody = document.getElementById('planTableBody');
