@@ -18,13 +18,16 @@ Environment:
 
 import os
 import hashlib
+import io
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, jsonify, request, session, send_from_directory
+from flask import Flask, jsonify, request, session, send_from_directory, send_file
 from flask_cors import CORS
 import requests
 import psycopg2
 import psycopg2.extras
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 app = Flask(__name__, static_folder='.', template_folder='.')
 app.secret_key = os.environ.get("SECRET_KEY", "nanchao-bi-secret-2026")
@@ -840,6 +843,30 @@ def api_product_statuses():
     return jsonify(rows)
 
 
+# ── API: 商品梯队列表 ──
+@app.route('/api/product_tiers')
+@login_required
+def api_product_tiers():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT DISTINCT "商品梯队" FROM products_remarks WHERE "商品梯队" IS NOT NULL AND "商品梯队" != \'\' ORDER BY 1')
+    rows = [r[0] for r in cur.fetchall()]
+    cur.close(); conn.close()
+    return jsonify(rows)
+
+
+# ── API: 负责人列表 ──
+@app.route('/api/product_managers')
+@login_required
+def api_product_managers():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT DISTINCT username FROM bi_users WHERE is_active = true AND username IS NOT NULL AND username != \'\' ORDER BY 1')
+    rows = [r[0] for r in cur.fetchall()]
+    cur.close(); conn.close()
+    return jsonify(rows)
+
+
 # ── API: 商品列表详情（从products表翻页查询） ──
 @app.route('/api/product_list')
 @login_required
@@ -848,6 +875,7 @@ def api_product_list():
     page_size = request.args.get('page_size', 10, type=int)
     search_id = request.args.get('search_id', '').strip()
     search_name = request.args.get('search_name', '').strip()
+    search_model = request.args.get('search_model', '').strip()
     search_tier = request.args.get('search_tier', '').strip()
     search_manager = request.args.get('search_manager', '').strip()
     search_status = request.args.get('search_status', '').strip()
@@ -867,15 +895,21 @@ def api_product_list():
         conditions.append('p."商品ID" = %s')
         params.append(search_id)
     if search_name:
-        conditions.append('p."商品名称" = %s')
-        params.append(search_name)
+        conditions.append('p."商品名称" ILIKE %s')
+        params.append(f'%{search_name}%')
+    if search_model:
+        conditions.append('p."商家编码" ILIKE %s')
+        params.append(f'%{search_model}%')
     if search_tier:
-        conditions.append('pr."商品梯队" = %s')
-        params.append(search_tier)
+        tiers = [t.strip() for t in search_tier.split(',') if t.strip()]
+        conditions.append('pr."商品梯队" = ANY(%s)')
+        params.append(tiers)
     if search_manager:
-        extra_joins.append('LEFT JOIN bi_users u ON pr."负责人" = u.id::text AND u.is_active = true')
-        conditions.append('u.username ILIKE %s')
-        params.append(f'%{search_manager}%')
+        managers = [m.strip() for m in search_manager.split(',') if m.strip()]
+        if managers:
+            extra_joins.append('LEFT JOIN bi_users u ON pr."负责人" = u.id::text AND u.is_active = true')
+            conditions.append('u.username = ANY(%s)')
+            params.append(managers)
     if search_status:
         conditions.append('p."商品状态" = %s')
         params.append(search_status)
@@ -965,6 +999,165 @@ def api_product_list():
             "manager_name": manager_name_map.get(str(r['负责人']), '') if r['负责人'] else '',
         } for r in rows]
     })
+
+
+# ── API: 商品列表明细导出Excel ──
+@app.route('/api/product_list/export')
+@login_required
+def api_product_list_export():
+    search_status = request.args.get('search_status', '').strip()
+    search_name = request.args.get('search_name', '').strip()
+    search_model = request.args.get('search_model', '').strip()
+    search_tier = request.args.get('search_tier', '').strip()
+    search_promotion = request.args.get('search_promotion', '').strip()
+    search_manager = request.args.get('search_manager', '').strip()
+
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    conditions = ['TRUE']
+    params = []
+    base_joins = 'LEFT JOIN products_remarks pr ON p."商品ID" = pr."商品id"'
+    extra_joins = []
+
+    if search_status:
+        conditions.append('p."商品状态" = %s')
+        params.append(search_status)
+    if search_name:
+        conditions.append('p."商品名称" ILIKE %s')
+        params.append(f'%{search_name}%')
+    if search_model:
+        conditions.append('p."商家编码" ILIKE %s')
+        params.append(f'%{search_model}%')
+    if search_tier:
+        tiers = [t.strip() for t in search_tier.split(',') if t.strip()]
+        conditions.append('pr."商品梯队" = ANY(%s)')
+        params.append(tiers)
+    if search_manager:
+        managers = [m.strip() for m in search_manager.split(',') if m.strip()]
+        if managers:
+            extra_joins.append('LEFT JOIN bi_users u ON pr."负责人" = u.id::text AND u.is_active = true')
+            conditions.append('u.username = ANY(%s)')
+            params.append(managers)
+
+    joins = base_joins + ' ' + ' '.join(extra_joins)
+    where_clause = ' AND '.join(conditions)
+
+    promo_subjoin = ('LEFT JOIN ('
+        'SELECT "主体id", COALESCE(SUM("花费"),0) AS total_cost, '
+        'ARRAY_AGG(DISTINCT "场景名字") AS scene_names '
+        'FROM wj_spbb_spandjh '
+        'WHERE "日期" >= CURRENT_DATE - INTERVAL \'3 days\' '
+        'GROUP BY "主体id"'
+    ') pm ON p."商品ID" = pm."主体id"::text')
+
+    cur.execute(f"""
+        SELECT p."商品ID", p."商品名称", p."商品状态", p."商家编码",
+               p."类目名称", p."创建时间",
+               pr."商品梯队", pr."负责人",
+               pm.total_cost, pm.scene_names
+        FROM products p
+        {joins}
+        {promo_subjoin}
+        WHERE {where_clause}
+        ORDER BY p."创建时间" DESC NULLS LAST
+    """, params)
+    rows = cur.fetchall()
+
+    # 构建推广状态映射
+    promo_map = {}
+    manager_ids = set()
+    for r in rows:
+        pid = r['商品ID']
+        cost = float(r['total_cost'] or 0)
+        if cost > 0:
+            scenes = list(filter(None, r['scene_names'] or []))
+            promo_map[pid] = '/'.join(scenes)
+        else:
+            promo_map[pid] = '未推广'
+        if r['负责人']:
+            manager_ids.add(r['负责人'])
+
+    manager_name_map = {}
+    if manager_ids:
+        id_list = list(manager_ids)
+        placeholders = ','.join(['%s'] * len(id_list))
+        cur.execute(f'SELECT id, username FROM bi_users WHERE id IN ({placeholders}) AND is_active = true', id_list)
+        for u in cur.fetchall():
+            manager_name_map[str(u['id'])] = u['username']
+
+    cur.close()
+    conn.close()
+
+    # ── 如果推广状态筛选，在代码层面过滤 ──
+    if search_promotion == '已推广':
+        rows = [r for r in rows if float(r['total_cost'] or 0) > 0]
+    elif search_promotion == '未推广':
+        rows = [r for r in rows if float(r['total_cost'] or 0) <= 0]
+
+    # ── 生成 Excel ──
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = '商品列表'
+
+    headers = ['商品ID', '商品名称', '商品状态', '商家编码', '商品梯队',
+               '类目名称', '推广状态', '创建时间', '负责人']
+    col_widths = [18, 40, 10, 16, 10, 18, 20, 20, 12]
+    header_font = Font(bold=True, size=11, color='FFFFFF')
+    header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    header_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    thin_border = Border(
+        left=Side(style='thin', color='D9D9D9'),
+        right=Side(style='thin', color='D9D9D9'),
+        top=Side(style='thin', color='D9D9D9'),
+        bottom=Side(style='thin', color='D9D9D9')
+    )
+
+    for col_idx, (h, w) in enumerate(zip(headers, col_widths), 1):
+        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_align
+        cell.border = thin_border
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = w
+
+    body_font = Font(size=10)
+    body_align = Alignment(vertical='center')
+
+    for row_idx, r in enumerate(rows, 2):
+        pid = r['商品ID']
+        cost = float(r['total_cost'] or 0)
+        promo = promo_map.get(pid, '未推广')
+        manager_name = manager_name_map.get(str(r['负责人']), '') if r['负责人'] else ''
+        created = str(r['创建时间'])[:19] if r['创建时间'] else ''
+
+        row_data = [
+            pid,
+            r['商品名称'],
+            r['商品状态'],
+            r['商家编码'],
+            r['商品梯队'] or '',
+            r['类目名称'],
+            promo,
+            created,
+            manager_name,
+        ]
+        for col_idx, val in enumerate(row_data, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.font = body_font
+            cell.alignment = body_align
+            cell.border = thin_border
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'商品列表_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    )
 
 
 # ── API: 设置商品梯队（UPSERT products_remarks） ──

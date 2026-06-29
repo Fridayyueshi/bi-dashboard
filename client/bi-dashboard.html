@@ -832,6 +832,80 @@
     }
     .pd-date-picker .confirm-btn:hover { background: #d97706; }
 
+    /* ── 梯队下拉多选 ── */
+    .tier-dropdown {
+      position: relative;
+      display: inline-block;
+      min-width: 120px;
+    }
+    .tier-dropdown-trigger {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      user-select: none;
+    }
+    .tier-dropdown-trigger:hover {
+      border-color: var(--accent-cyan);
+    }
+    .tier-dropdown-arrow {
+      font-size: 10px;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+    .tier-dropdown-arrow.open {
+      transform: rotate(180deg);
+    }
+    .tier-dropdown-panel {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      z-index: 100;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 0;
+      min-width: 140px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .tier-dropdown-panel.hidden { display: none; }
+    .tier-dropdown-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .tier-opt {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      font-size: 13px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .tier-opt:hover {
+      background: var(--bg-dark);
+    }
+    .tier-opt input[type="checkbox"] {
+      accent-color: var(--accent-cyan);
+      cursor: pointer;
+    }
+    .tier-dropdown-actions {
+      padding: 6px 10px 4px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+    }
+
     /* ── 登录页面 ── */
     .login-overlay {
       position: fixed;
@@ -935,6 +1009,70 @@
       vertical-align: middle;
     }
     .ai-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* ── 导出弹窗 ── */
+    .export-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .export-modal-overlay.hidden { display: none; }
+    .export-modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 420px;
+      max-width: 90vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .export-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .export-modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .export-modal-close:hover {
+      background: var(--bg-dark);
+      color: var(--text-primary);
+    }
+    .export-modal-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .export-filter-group label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .export-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+    }
     .ai-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
     .login-box {
@@ -1115,6 +1253,50 @@
     <span class="last-update" id="lastUpdate"></span>
     <button class="logout-btn" onclick="doLogout()">退出登录</button>
     <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">🔄 刷新数据</button>
+  </div>
+</div>
+
+<!-- ── 导出弹窗 ── -->
+<div class="export-modal-overlay hidden" id="exportModal">
+  <div class="export-modal-box">
+    <div class="export-modal-header">
+      <span>📥 导出商品列表</span>
+      <button class="export-modal-close" onclick="plCloseExportModal()">✕</button>
+    </div>
+    <div class="export-modal-body">
+      <div class="export-filter-group">
+        <label>商品状态</label>
+        <select id="exportFilterStatus" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;cursor:pointer;width:100%">
+          <option value="">全部</option>
+        </select>
+      </div>
+      <div class="export-filter-group">
+        <label>商家编码</label>
+        <input type="text" id="exportFilterModel" placeholder="输入商家编码..." style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:100%;box-sizing:border-box">
+      </div>
+      <div class="export-filter-group">
+        <label>商品梯队</label>
+        <select id="exportFilterTier" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;cursor:pointer;width:100%">
+          <option value="">全部</option>
+        </select>
+      </div>
+      <div class="export-filter-group">
+        <label>推广状态</label>
+        <select id="exportFilterPromotion" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;cursor:pointer;width:100%">
+          <option value="">全部</option>
+          <option value="已推广">已推广</option>
+          <option value="未推广">未推广</option>
+        </select>
+      </div>
+      <div class="export-filter-group">
+        <label>负责人</label>
+        <input type="text" id="exportFilterManager" placeholder="输入负责人名称..." style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:100%;box-sizing:border-box">
+      </div>
+    </div>
+    <div class="export-modal-footer">
+      <button class="confirm-btn" style="background:var(--bg-card-hover)" onclick="plCloseExportModal()">取消</button>
+      <button class="confirm-btn" onclick="plDoExport()">导出 Excel</button>
+    </div>
   </div>
 </div>
 
@@ -1348,20 +1530,44 @@
           <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
             <input type="text" id="plSearchId" placeholder="搜索商品ID..." style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:140px;font-family:monospace">
             <input type="text" id="plSearchName" placeholder="搜索商品名称..." style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:170px">
+            <input type="text" id="plSearchModel" placeholder="搜索商家编码..." style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:140px;font-family:monospace">
             <select id="plSearchStatus" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;cursor:pointer">
               <option value="">全部状态</option>
             </select>
-            <select id="plSearchTier" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;cursor:pointer">
-              <option value="">全部梯队</option>
-              <option value="S">S</option>
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C(新品)">C(新品)</option>
-              <option value="放弃">放弃</option>
-            </select>
-            <input type="text" id="plSearchManager" placeholder="搜索负责人..." style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:130px">
+            <div class="tier-dropdown" id="plSearchTierDropdown">
+              <div class="tier-dropdown-trigger" onclick="plToggleTierDropdown(event)">
+                <span id="plTierDisplay">全部梯队</span>
+                <span class="tier-dropdown-arrow">▾</span>
+              </div>
+              <div class="tier-dropdown-panel hidden" id="plTierPanel">
+                <div class="tier-dropdown-options">
+                  <label class="tier-opt"><input type="checkbox" class="tier-check" value="S"> S</label>
+                  <label class="tier-opt"><input type="checkbox" class="tier-check" value="A"> A</label>
+                  <label class="tier-opt"><input type="checkbox" class="tier-check" value="B"> B</label>
+                  <label class="tier-opt"><input type="checkbox" class="tier-check" value="C(新品)"> C(新品)</label>
+                  <label class="tier-opt"><input type="checkbox" class="tier-check" value="放弃"> 放弃</label>
+                </div>
+                <div class="tier-dropdown-actions">
+                  <button class="confirm-btn" style="padding:3px 14px;font-size:12px" onclick="plConfirmTier()">确定</button>
+                </div>
+              </div>
+            </div>
+            <div class="tier-dropdown" id="plSearchManagerDropdown">
+              <div class="tier-dropdown-trigger" onclick="plToggleManagerDropdown(event)">
+                <span id="plManagerDisplay">全部负责人</span>
+                <span class="tier-dropdown-arrow">▾</span>
+              </div>
+              <div class="tier-dropdown-panel hidden" id="plManagerPanel">
+                <div class="tier-dropdown-options" id="plManagerOptions">
+                </div>
+                <div class="tier-dropdown-actions">
+                  <button class="confirm-btn" style="padding:3px 14px;font-size:12px" onclick="plConfirmManager()">确定</button>
+                </div>
+              </div>
+            </div>
             <button class="confirm-btn" onclick="plSearch()">搜索</button>
             <button class="confirm-btn" style="background:var(--bg-card-hover)" onclick="plReset()">重置</button>
+            <button class="confirm-btn" style="background:var(--accent-cyan);color:var(--bg-dark)" onclick="plOpenExportModal()">📥 导出</button>
           </div>
           <div class="prod-table-wrap">
             <table class="data-table" style="table-layout:fixed">
@@ -2651,12 +2857,14 @@ async function plLoadData() {
   try {
     const searchId = document.getElementById('plSearchId').value.trim();
     const searchName = document.getElementById('plSearchName').value.trim();
-    const searchTier = document.getElementById('plSearchTier').value;
-    const searchManager = document.getElementById('plSearchManager').value.trim();
+    const searchModel = document.getElementById('plSearchModel').value.trim();
+    const searchTier = Array.from(document.querySelectorAll('.tier-check:checked')).map(cb => cb.value).join(',');
+    const searchManager = Array.from(document.querySelectorAll('.manager-check:checked')).map(cb => cb.value).join(',');
     const searchStatus = document.getElementById('plSearchStatus').value;
     let url = '/api/product_list?page=' + plPage + '&page_size=' + PL_PAGE_SIZE;
     if (searchId) url += '&search_id=' + encodeURIComponent(searchId);
     if (searchName) url += '&search_name=' + encodeURIComponent(searchName);
+    if (searchModel) url += '&search_model=' + encodeURIComponent(searchModel);
     if (searchTier) url += '&search_tier=' + encodeURIComponent(searchTier);
     if (searchManager) url += '&search_manager=' + encodeURIComponent(searchManager);
     if (searchStatus) url += '&search_status=' + encodeURIComponent(searchStatus);
@@ -2760,12 +2968,61 @@ function plSearch() {
   plLoadData();
 }
 
+// ── 梯队下拉多选 ──
+function plToggleTierDropdown(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('plTierPanel');
+  const arrow = document.querySelector('.tier-dropdown-arrow');
+  panel.classList.toggle('hidden');
+  arrow.classList.toggle('open');
+}
+
+function plConfirmTier() {
+  const checked = document.querySelectorAll('.tier-check:checked');
+  const display = document.getElementById('plTierDisplay');
+  if (checked.length === 0) {
+    display.textContent = '全部梯队';
+  } else {
+    display.textContent = Array.from(checked).map(cb => cb.value).join(', ');
+  }
+  // 关闭面板
+  document.getElementById('plTierPanel').classList.add('hidden');
+  document.querySelector('.tier-dropdown-arrow').classList.remove('open');
+  // 触发搜索
+  plPage = 1;
+  plLoadData();
+}
+
+// 点击外部关闭下拉面板
+document.addEventListener('click', function(e) {
+  let isTier = false, isManager = false;
+  const ddTier = document.getElementById('plSearchTierDropdown');
+  if (ddTier && ddTier.contains(e.target)) isTier = true;
+  const ddMgr = document.getElementById('plSearchManagerDropdown');
+  if (ddMgr && ddMgr.contains(e.target)) isManager = true;
+  if (!isTier) {
+    document.getElementById('plTierPanel').classList.add('hidden');
+    document.querySelector('#plSearchTierDropdown .tier-dropdown-arrow')?.classList.remove('open');
+  }
+  if (!isManager) {
+    document.getElementById('plManagerPanel').classList.add('hidden');
+    document.querySelector('#plSearchManagerDropdown .tier-dropdown-arrow')?.classList.remove('open');
+  }
+});
+
 function plReset() {
   document.getElementById('plSearchId').value = '';
   document.getElementById('plSearchName').value = '';
+  document.getElementById('plSearchModel').value = '';
   document.getElementById('plSearchStatus').value = '';
-  document.getElementById('plSearchTier').value = '';
-  document.getElementById('plSearchManager').value = '';
+  document.querySelectorAll('.tier-check').forEach(cb => cb.checked = false);
+  document.getElementById('plTierDisplay').textContent = '全部梯队';
+  document.getElementById('plTierPanel').classList.add('hidden');
+  document.querySelector('#plSearchTierDropdown .tier-dropdown-arrow')?.classList.remove('open');
+  document.querySelectorAll('.manager-check').forEach(cb => cb.checked = false);
+  document.getElementById('plManagerDisplay').textContent = '全部负责人';
+  document.getElementById('plManagerPanel').classList.add('hidden');
+  document.querySelector('#plSearchManagerDropdown .tier-dropdown-arrow')?.classList.remove('open');
   plSortField = '';
   plSortDir = 'none';
   document.querySelectorAll('#page-shangpinliebiao .sort-arrow').forEach(el => {
@@ -2800,6 +3057,128 @@ function plSelectRow(row) {
   document.querySelectorAll('#page-shangpinliebiao .data-table tbody tr.pl-selected-row')
     .forEach(r => r.classList.remove('pl-selected-row'));
   row.classList.add('pl-selected-row');
+}
+
+// ── 负责人下拉多选 ──
+let plManagersLoaded = false;
+async function plLoadManagers() {
+  if (plManagersLoaded) return;
+  try {
+    const res = await fetch('/api/product_managers');
+    if (!res.ok) return;
+    const managers = await res.json();
+    const container = document.getElementById('plManagerOptions');
+    managers.forEach(m => {
+      const label = document.createElement('label');
+      label.className = 'tier-opt';
+      label.innerHTML = '<input type="checkbox" class="manager-check" value="' + m.replace(/"/g,'&quot;') + '"> ' + m;
+      container.appendChild(label);
+    });
+    plManagersLoaded = true;
+  } catch(e) {}
+}
+
+function plToggleManagerDropdown(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('plManagerPanel');
+  const arrow = document.querySelector('#plSearchManagerDropdown .tier-dropdown-arrow');
+  panel.classList.toggle('hidden');
+  arrow.classList.toggle('open');
+  plLoadManagers();
+}
+
+function plConfirmManager() {
+  const checked = document.querySelectorAll('.manager-check:checked');
+  const display = document.getElementById('plManagerDisplay');
+  if (checked.length === 0) {
+    display.textContent = '全部负责人';
+  } else {
+    display.textContent = Array.from(checked).map(cb => cb.value).join(', ');
+  }
+  document.getElementById('plManagerPanel').classList.add('hidden');
+  document.querySelector('#plSearchManagerDropdown .tier-dropdown-arrow')?.classList.remove('open');
+  plPage = 1;
+  plLoadData();
+}
+
+// ── 导出弹窗 ──
+let plExportLoaded = false;
+async function plOpenExportModal() {
+  document.getElementById('exportModal').classList.remove('hidden');
+  if (plExportLoaded) return;
+  try {
+    // 加载商品状态
+    const statusRes = await fetch('/api/product_statuses');
+    if (statusRes.ok) {
+      const statuses = await statusRes.json();
+      const sel = document.getElementById('exportFilterStatus');
+      statuses.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        sel.appendChild(opt);
+      });
+    }
+    // 加载商品梯队
+    const tierRes = await fetch('/api/product_tiers');
+    if (tierRes.ok) {
+      const tiers = await tierRes.json();
+      const sel = document.getElementById('exportFilterTier');
+      tiers.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        sel.appendChild(opt);
+      });
+    }
+    plExportLoaded = true;
+  } catch(e) {
+    // 静默失败
+  }
+}
+
+function plCloseExportModal() {
+  document.getElementById('exportModal').classList.add('hidden');
+}
+
+async function plDoExport() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '⏳ 导出中...';
+  try {
+    const status = document.getElementById('exportFilterStatus').value;
+    const model = document.getElementById('exportFilterModel').value.trim();
+    const tier = document.getElementById('exportFilterTier').value;
+    const promotion = document.getElementById('exportFilterPromotion').value;
+    const manager = document.getElementById('exportFilterManager').value.trim();
+
+    let url = '/api/product_list/export?';
+    if (status) url += 'search_status=' + encodeURIComponent(status) + '&';
+    if (model) url += 'search_model=' + encodeURIComponent(model) + '&';
+    if (tier) url += 'search_tier=' + encodeURIComponent(tier) + '&';
+    if (promotion) url += 'search_promotion=' + encodeURIComponent(promotion) + '&';
+    if (manager) url += 'search_manager=' + encodeURIComponent(manager) + '&';
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('导出失败 (HTTP ' + res.status + ')');
+
+    const blob = await res.blob();
+    const downloadUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = '商品列表_' + new Date().toISOString().slice(0,19).replace(/[T:]/g, '').slice(0,15) + '.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(downloadUrl);
+
+    plCloseExportModal();
+  } catch(e) {
+    alert('导出失败: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '导出 Excel';
+  }
 }
 
 // ── 咨询概况 ──
