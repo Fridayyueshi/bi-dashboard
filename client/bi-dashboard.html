@@ -1276,9 +1276,24 @@
       </div>
       <div class="export-filter-group">
         <label>商品梯队</label>
-        <select id="exportFilterTier" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;cursor:pointer;width:100%">
-          <option value="">全部</option>
-        </select>
+        <div class="tier-dropdown" id="exportFilterTierDropdown">
+          <div class="tier-dropdown-trigger" onclick="plExportToggleTierDropdown(event)">
+            <span id="exportTierDisplay">全部梯队</span>
+            <span class="tier-dropdown-arrow">▾</span>
+          </div>
+          <div class="tier-dropdown-panel hidden" id="exportTierPanel">
+            <div class="tier-dropdown-options">
+              <label class="tier-opt"><input type="checkbox" class="export-tier-check" value="S"> S</label>
+              <label class="tier-opt"><input type="checkbox" class="export-tier-check" value="A"> A</label>
+              <label class="tier-opt"><input type="checkbox" class="export-tier-check" value="B"> B</label>
+              <label class="tier-opt"><input type="checkbox" class="export-tier-check" value="C(新品)"> C(新品)</label>
+              <label class="tier-opt"><input type="checkbox" class="export-tier-check" value="放弃"> 放弃</label>
+            </div>
+            <div class="tier-dropdown-actions">
+              <button class="confirm-btn" style="padding:3px 14px;font-size:12px" onclick="plExportConfirmTier()">确定</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="export-filter-group">
         <label>推广状态</label>
@@ -1290,7 +1305,19 @@
       </div>
       <div class="export-filter-group">
         <label>负责人</label>
-        <input type="text" id="exportFilterManager" placeholder="输入负责人名称..." style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:100%;box-sizing:border-box">
+        <div class="tier-dropdown" id="exportFilterManagerDropdown">
+          <div class="tier-dropdown-trigger" onclick="plExportToggleManagerDropdown(event)">
+            <span id="exportManagerDisplay">全部负责人</span>
+            <span class="tier-dropdown-arrow">▾</span>
+          </div>
+          <div class="tier-dropdown-panel hidden" id="exportManagerPanel">
+            <div class="tier-dropdown-options" id="exportManagerOptions">
+            </div>
+            <div class="tier-dropdown-actions">
+              <button class="confirm-btn" style="padding:3px 14px;font-size:12px" onclick="plExportConfirmManager()">确定</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="export-modal-footer">
@@ -2995,11 +3022,15 @@ function plConfirmTier() {
 
 // 点击外部关闭下拉面板
 document.addEventListener('click', function(e) {
-  let isTier = false, isManager = false;
+  let isTier = false, isManager = false, isExportTier = false, isExportMgr = false;
   const ddTier = document.getElementById('plSearchTierDropdown');
   if (ddTier && ddTier.contains(e.target)) isTier = true;
   const ddMgr = document.getElementById('plSearchManagerDropdown');
   if (ddMgr && ddMgr.contains(e.target)) isManager = true;
+  const ddExpTier = document.getElementById('exportFilterTierDropdown');
+  if (ddExpTier && ddExpTier.contains(e.target)) isExportTier = true;
+  const ddExpMgr = document.getElementById('exportFilterManagerDropdown');
+  if (ddExpMgr && ddExpMgr.contains(e.target)) isExportMgr = true;
   if (!isTier) {
     document.getElementById('plTierPanel').classList.add('hidden');
     document.querySelector('#plSearchTierDropdown .tier-dropdown-arrow')?.classList.remove('open');
@@ -3007,6 +3038,14 @@ document.addEventListener('click', function(e) {
   if (!isManager) {
     document.getElementById('plManagerPanel').classList.add('hidden');
     document.querySelector('#plSearchManagerDropdown .tier-dropdown-arrow')?.classList.remove('open');
+  }
+  if (!isExportTier) {
+    document.getElementById('exportTierPanel').classList.add('hidden');
+    document.querySelector('#exportFilterTierDropdown .tier-dropdown-arrow')?.classList.remove('open');
+  }
+  if (!isExportMgr) {
+    document.getElementById('exportManagerPanel').classList.add('hidden');
+    document.querySelector('#exportFilterManagerDropdown .tier-dropdown-arrow')?.classList.remove('open');
   }
 });
 
@@ -3101,6 +3140,64 @@ function plConfirmManager() {
   plLoadData();
 }
 
+// ── 导出弹窗：梯队下拉多选 ──
+function plExportToggleTierDropdown(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('exportTierPanel');
+  const arrow = document.querySelector('#exportFilterTierDropdown .tier-dropdown-arrow');
+  panel.classList.toggle('hidden');
+  arrow.classList.toggle('open');
+}
+function plExportConfirmTier() {
+  const checked = document.querySelectorAll('.export-tier-check:checked');
+  const display = document.getElementById('exportTierDisplay');
+  if (checked.length === 0) {
+    display.textContent = '全部梯队';
+  } else {
+    display.textContent = Array.from(checked).map(cb => cb.value).join(', ');
+  }
+  document.getElementById('exportTierPanel').classList.add('hidden');
+  document.querySelector('#exportFilterTierDropdown .tier-dropdown-arrow')?.classList.remove('open');
+}
+
+// ── 导出弹窗：负责人下拉多选 ──
+let exportManagersLoaded = false;
+async function plExportLoadManagers() {
+  if (exportManagersLoaded) return;
+  try {
+    const res = await fetch('/api/product_managers');
+    if (!res.ok) return;
+    const managers = await res.json();
+    const container = document.getElementById('exportManagerOptions');
+    managers.forEach(m => {
+      const label = document.createElement('label');
+      label.className = 'tier-opt';
+      label.innerHTML = '<input type="checkbox" class="export-manager-check" value="' + m.replace(/"/g,'&quot;') + '"> ' + m;
+      container.appendChild(label);
+    });
+    exportManagersLoaded = true;
+  } catch(e) {}
+}
+function plExportToggleManagerDropdown(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('exportManagerPanel');
+  const arrow = document.querySelector('#exportFilterManagerDropdown .tier-dropdown-arrow');
+  panel.classList.toggle('hidden');
+  arrow.classList.toggle('open');
+  plExportLoadManagers();
+}
+function plExportConfirmManager() {
+  const checked = document.querySelectorAll('.export-manager-check:checked');
+  const display = document.getElementById('exportManagerDisplay');
+  if (checked.length === 0) {
+    display.textContent = '全部负责人';
+  } else {
+    display.textContent = Array.from(checked).map(cb => cb.value).join(', ');
+  }
+  document.getElementById('exportManagerPanel').classList.add('hidden');
+  document.querySelector('#exportFilterManagerDropdown .tier-dropdown-arrow')?.classList.remove('open');
+}
+
 // ── 导出弹窗 ──
 let plExportLoaded = false;
 async function plOpenExportModal() {
@@ -3116,18 +3213,6 @@ async function plOpenExportModal() {
         const opt = document.createElement('option');
         opt.value = s;
         opt.textContent = s;
-        sel.appendChild(opt);
-      });
-    }
-    // 加载商品梯队
-    const tierRes = await fetch('/api/product_tiers');
-    if (tierRes.ok) {
-      const tiers = await tierRes.json();
-      const sel = document.getElementById('exportFilterTier');
-      tiers.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t;
-        opt.textContent = t;
         sel.appendChild(opt);
       });
     }
@@ -3148,9 +3233,11 @@ async function plDoExport() {
   try {
     const status = document.getElementById('exportFilterStatus').value;
     const model = document.getElementById('exportFilterModel').value.trim();
-    const tier = document.getElementById('exportFilterTier').value;
+    const tierChecks = document.querySelectorAll('.export-tier-check:checked');
+    const tier = Array.from(tierChecks).map(cb => cb.value).join(',');
     const promotion = document.getElementById('exportFilterPromotion').value;
-    const manager = document.getElementById('exportFilterManager').value.trim();
+    const managerChecks = document.querySelectorAll('.export-manager-check:checked');
+    const manager = Array.from(managerChecks).map(cb => cb.value).join(',');
 
     let url = '/api/product_list/export?';
     if (status) url += 'search_status=' + encodeURIComponent(status) + '&';
