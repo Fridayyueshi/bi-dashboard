@@ -897,7 +897,7 @@ def api_product_list():
         'SELECT "主体id", COALESCE(SUM("花费"),0) AS total_cost, '
         'ARRAY_AGG(DISTINCT "场景名字") AS scene_names '
         'FROM wj_spbb_spandjh '
-        'WHERE "日期" >= CURRENT_DATE - INTERVAL \'7 days\' '
+        'WHERE "日期" >= CURRENT_DATE - INTERVAL \'3 days\' '
         'GROUP BY "主体id"'
     ') pm ON p."商品ID" = pm."主体id"::text')
 

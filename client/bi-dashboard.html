@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>南巢店铺 BI 看板</title>
+  <title>BI-OS</title>
   <style>
     :root {
       --bg-dark: #0f1419;
@@ -832,16 +832,6 @@
     }
     .pd-date-picker .confirm-btn:hover { background: #d97706; }
 
-    /* ── 页脚 ── */
-    .footer {
-      text-align: center;
-      padding: 20px;
-      color: var(--text-muted);
-      font-size: 12px;
-      border-top: 1px solid var(--border);
-      margin-top: 20px;
-    }
-
     /* ── 登录页面 ── */
     .login-overlay {
       position: fixed;
@@ -1103,7 +1093,7 @@
 <!-- ── 登录遮罩层 ── -->
 <div class="login-overlay" id="loginOverlay">
   <div class="login-box">
-    <h1>🏪 店铺 BI 看板</h1>
+    <h1>BI-OS</h1>
     <p>请登录以继续</p>
     <input type="text" id="loginUser" placeholder="用户名" autocomplete="username" onkeydown="if(event.key==='Enter') doLogin()">
     <input type="password" id="loginPass" placeholder="密码" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
@@ -1115,7 +1105,7 @@
 <!-- ── 顶部 ── -->
 <div class="header">
   <div class="header-left">
-    <div class="logo">🏪 店铺 BI 看板</div>
+    <div class="logo">BI-OS</div>
     <span style="font-size:13px;color:var(--text-secondary);margin-left:16px">店铺</span>
     <select id="storeSelector" onchange="changeStore(this.value)" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;cursor:pointer;min-width:200px">
       <option value="nanchao_tmall">南巢家具旗舰店-天猫</option>
@@ -1384,7 +1374,7 @@
                   <th style="width:110px">商家编码</th>
                   <th class="sortable-header" onclick="plSortBy('tier')" style="width:90px">商品梯队<span class="sort-arrow" id="plArrowTier">↕</span></th>
                   <th style="width:130px">类目名称</th>
-                  <th class="sortable-header" onclick="plSortBy('promotion_status')" title="根据近7天的推广花费" style="width:110px">推广状态<span class="sort-arrow" id="plArrowPromo">↕</span></th>
+                  <th class="sortable-header" onclick="plSortBy('promotion_status')" title="根据近3天的推广花费判定" style="width:110px">推广状态<span class="sort-arrow" id="plArrowPromo">↕</span></th>
                   <th class="sortable-header" onclick="plSortBy('created_at')" style="width:130px">创建时间<span class="sort-arrow" id="plArrowCreated">↕</span></th>
                   <th style="width:90px">负责人</th>
                   <th style="width:220px">操作</th>
@@ -1496,9 +1486,6 @@
 
 </div>  <!-- /container -->
 
-<div class="footer">
-  🏪 南巢店铺 BI 看板 | <span id="footerTime"></span> | 数据来源: 生意参谋 + 无界
-</div>
 
 <script>
 // ── 工具函数 ──
@@ -2901,7 +2888,6 @@ async function loadAll() {
 
   const now = new Date().toLocaleString('zh-CN');
   document.getElementById('lastUpdate').textContent = `更新于 ${now}`;
-  document.getElementById('footerTime').textContent = `数据更新: ${now}`;
 
   btn.disabled = false;
   btn.textContent = '🔄 刷新数据';
