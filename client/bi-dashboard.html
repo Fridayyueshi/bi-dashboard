@@ -1358,6 +1358,9 @@
           <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
             <input type="text" id="plSearchId" placeholder="搜索商品ID..." style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:140px;font-family:monospace">
             <input type="text" id="plSearchName" placeholder="搜索商品名称..." style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;width:170px">
+            <select id="plSearchStatus" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;cursor:pointer">
+              <option value="">全部状态</option>
+            </select>
             <select id="plSearchTier" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-primary);font-size:13px;cursor:pointer">
               <option value="">全部梯队</option>
               <option value="S">S</option>
@@ -1371,20 +1374,20 @@
             <button class="confirm-btn" style="background:var(--bg-card-hover)" onclick="plReset()">重置</button>
           </div>
           <div class="prod-table-wrap">
-            <table class="data-table">
+            <table class="data-table" style="table-layout:fixed">
               <thead>
                 <tr>
-                  <th>商品ID</th>
-                  <th>商品名称</th>
-                  <th>商品状态</th>
-                  <th>商品图片</th>
-                  <th>商家编码</th>
-                  <th class="sortable-header" onclick="plSortBy('tier')">商品梯队<span class="sort-arrow" id="plArrowTier">↕</span></th>
-                  <th>类目名称</th>
-                  <th class="sortable-header" onclick="plSortBy('promotion_status')" title="根据近7天的推广花费">推广状态<span class="sort-arrow" id="plArrowPromo">↕</span></th>
-                  <th class="sortable-header" onclick="plSortBy('created_at')">创建时间<span class="sort-arrow" id="plArrowCreated">↕</span></th>
-                  <th>负责人</th>
-                  <th>操作</th>
+                  <th style="width:90px">商品ID</th>
+                  <th style="width:200px">商品名称</th>
+                  <th style="width:70px">商品状态</th>
+                  <th style="width:70px">商品图片</th>
+                  <th style="width:110px">商家编码</th>
+                  <th class="sortable-header" onclick="plSortBy('tier')" style="width:90px">商品梯队<span class="sort-arrow" id="plArrowTier">↕</span></th>
+                  <th style="width:130px">类目名称</th>
+                  <th class="sortable-header" onclick="plSortBy('promotion_status')" title="根据近7天的推广花费" style="width:110px">推广状态<span class="sort-arrow" id="plArrowPromo">↕</span></th>
+                  <th class="sortable-header" onclick="plSortBy('created_at')" style="width:130px">创建时间<span class="sort-arrow" id="plArrowCreated">↕</span></th>
+                  <th style="width:90px">负责人</th>
+                  <th style="width:220px">操作</th>
                 </tr>
               </thead>
               <tbody id="plTableBody">
@@ -2663,11 +2666,13 @@ async function plLoadData() {
     const searchName = document.getElementById('plSearchName').value.trim();
     const searchTier = document.getElementById('plSearchTier').value;
     const searchManager = document.getElementById('plSearchManager').value.trim();
+    const searchStatus = document.getElementById('plSearchStatus').value;
     let url = '/api/product_list?page=' + plPage + '&page_size=' + PL_PAGE_SIZE;
     if (searchId) url += '&search_id=' + encodeURIComponent(searchId);
     if (searchName) url += '&search_name=' + encodeURIComponent(searchName);
     if (searchTier) url += '&search_tier=' + encodeURIComponent(searchTier);
     if (searchManager) url += '&search_manager=' + encodeURIComponent(searchManager);
+    if (searchStatus) url += '&search_status=' + encodeURIComponent(searchStatus);
     if (plSortField) {
       url += '&sort_field=' + plSortField;
       url += '&sort_dir=' + plSortDir;
@@ -2695,9 +2700,19 @@ async function plLoadData() {
         ? '<span style="color:var(--accent-green);font-size:12px">' + p.promotion_status + '</span>'
         : '<span style="color:var(--text-muted);font-size:12px">未推广</span>';
 
-      // 梯队显示
+      // 梯队显示 — 颜色映射（S最重要→红，放弃最不重要→浅灰）
+      const tierColors = {
+        'S': '#ff4757', 'A': '#ff6348', 'B': '#ffa502',
+        'C': '#2ed573', 'D': '#1e90ff', 'E': '#a4b0be',
+        '放弃': '#747d8c'
+      };
+      const tierBgColors = {
+        'S': 'rgba(255,71,87,0.15)', 'A': 'rgba(255,99,72,0.13)', 'B': 'rgba(255,165,2,0.13)',
+        'C': 'rgba(46,213,115,0.13)', 'D': 'rgba(30,144,255,0.13)', 'E': 'rgba(164,176,190,0.13)',
+        '放弃': 'rgba(116,125,140,0.10)'
+      };
       const tierHtml = p.tier
-        ? '<span style="font-size:12px">' + p.tier + '</span>'
+        ? '<span style="display:inline-block;padding:1px 8px;border-radius:3px;font-size:12px;font-weight:600;color:' + (tierColors[p.tier] || 'var(--text-primary)') + ';background:' + (tierBgColors[p.tier] || 'transparent') + '">' + p.tier + '</span>'
         : '<span style="color:var(--text-muted);font-size:11px">-</span>';
 
       // 负责人显示
@@ -2706,17 +2721,17 @@ async function plLoadData() {
         : '<span style="color:var(--text-muted);font-size:11px">-</span>';
 
       return '<tr onclick="plSelectRow(this)">' +
-        '<td style="font-family:monospace;font-size:11px">' + (p.prod_id || '-') + '</td>' +
-        '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (p.title || '').replace(/"/g,'&quot;') + '">' + (p.title || '-') + '</td>' +
-        '<td>' + (p.status || '-') + '</td>' +
-        '<td>' + imgHtml + '</td>' +
-        '<td style="font-family:monospace;font-size:11px">' + (p.model || '-') + '</td>' +
-        '<td style="text-align:center">' + tierHtml + '</td>' +
-        '<td>' + (p.category || '-') + '</td>' +
-        '<td style="text-align:center">' + promoHtml + '</td>' +
-        '<td style="font-family:monospace;font-size:11px">' + (p.created_at || '-') + '</td>' +
-        '<td style="text-align:center">' + managerHtml + '</td>' +
-        '<td style="text-align:center;white-space:nowrap">' +
+        '<td style="width:90px;font-family:monospace;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.prod_id || '-') + '</td>' +
+        '<td style="width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (p.title || '').replace(/"/g,'&quot;') + '"><a href="https://detail.tmall.com/item.htm?id=' + (p.prod_id || '') + '" target="_blank" style="color:var(--accent-cyan);text-decoration:none" title="' + (p.title || '').replace(/"/g,'&quot;') + '">' + (p.title || '-') + '</a></td>' +
+        '<td style="width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.status || '-') + '</td>' +
+        '<td style="width:70px">' + imgHtml + '</td>' +
+        '<td style="width:110px;font-family:monospace;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.model || '-') + '</td>' +
+        '<td style="width:90px">' + tierHtml + '</td>' +
+        '<td style="width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.category || '-') + '</td>' +
+        '<td style="width:110px">' + promoHtml + '</td>' +
+        '<td style="width:130px;font-family:monospace;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.created_at || '-') + '</td>' +
+        '<td style="width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + managerHtml + '</td>' +
+        '<td style="width:220px;white-space:nowrap">' +
           '<button class="confirm-btn" style="padding:3px 10px;font-size:12px;margin-right:4px" onclick="event.stopPropagation();openTierModal(\'' + (p.prod_id || '') + '\',\'' + (p.tier || '').replace(/'/g,"\\'") + '\')">设置梯队</button>' +
           '<button class="confirm-btn" style="padding:3px 10px;font-size:12px;background:var(--accent-cyan)" onclick="event.stopPropagation();openManagerModal(\'' + (p.prod_id || '') + '\',\'' + (p.manager_id || '') + '\')">设置负责人</button>' +
         '</td>' +
@@ -2761,6 +2776,7 @@ function plSearch() {
 function plReset() {
   document.getElementById('plSearchId').value = '';
   document.getElementById('plSearchName').value = '';
+  document.getElementById('plSearchStatus').value = '';
   document.getElementById('plSearchTier').value = '';
   document.getElementById('plSearchManager').value = '';
   plSortField = '';
@@ -2770,6 +2786,27 @@ function plReset() {
   });
   plPage = 1;
   plLoadData();
+}
+
+// ── 加载商品状态列表填充下拉框 ──
+let plStatusesLoaded = false;
+async function plLoadStatuses() {
+  if (plStatusesLoaded) return;
+  try {
+    const res = await fetch('/api/product_statuses');
+    if (!res.ok) return;
+    const statuses = await res.json();
+    const sel = document.getElementById('plSearchStatus');
+    statuses.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s;
+      sel.appendChild(opt);
+    });
+    plStatusesLoaded = true;
+  } catch(e) {
+    // 静默失败
+  }
 }
 
 function plSelectRow(row) {
@@ -2842,7 +2879,7 @@ function switchPage(name) {
   if (name === 'jingyingzonglan') loadAll();
   if (name === 'shangpinshuju') loadProductData();
   if (name === 'tuiguangshuju') tgLoadData();
-  if (name === 'shangpinliebiao') plLoadData();
+  if (name === 'shangpinliebiao') { plLoadData(); plLoadStatuses(); }
 }
 
 // ── 加载全部 ──

@@ -828,6 +828,18 @@ def api_plan_detail():
     return jsonify(result)
 
 
+# ── API: 商品状态列表（去重） ──
+@app.route('/api/product_statuses')
+@login_required
+def api_product_statuses():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT DISTINCT "商品状态" FROM products ORDER BY 1')
+    rows = [r[0] for r in cur.fetchall()]
+    cur.close(); conn.close()
+    return jsonify(rows)
+
+
 # ── API: 商品列表详情（从products表翻页查询） ──
 @app.route('/api/product_list')
 @login_required
@@ -838,6 +850,7 @@ def api_product_list():
     search_name = request.args.get('search_name', '').strip()
     search_tier = request.args.get('search_tier', '').strip()
     search_manager = request.args.get('search_manager', '').strip()
+    search_status = request.args.get('search_status', '').strip()
     sort_field = request.args.get('sort_field', 'created_at')
     sort_dir = request.args.get('sort_dir', 'desc')
 
@@ -863,6 +876,9 @@ def api_product_list():
         extra_joins.append('LEFT JOIN bi_users u ON pr."负责人" = u.id::text AND u.is_active = true')
         conditions.append('u.username ILIKE %s')
         params.append(f'%{search_manager}%')
+    if search_status:
+        conditions.append('p."商品状态" = %s')
+        params.append(search_status)
 
     joins = base_joins + ' ' + ' '.join(extra_joins)
     where_clause = ' AND '.join(conditions)
