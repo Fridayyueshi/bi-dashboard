@@ -2913,7 +2913,7 @@ async function plLoadData() {
 
     tbody.innerHTML = data.map(p => {
       const imgHtml = p.image
-        ? '<img src="' + p.image + '" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:4px" onerror="this.style.display=\'none\'" loading="lazy">'
+        ? '<div class="prod-thumb-wrap"><img class="prod-thumb" src="' + p.image + '" alt="" onerror="this.style.display=\'none\'" loading="lazy"><img class="prod-thumb-zoom" src="' + p.image + '" alt=""></div>'
         : '<span style="color:var(--text-muted);font-size:11px">无图片</span>';
 
       // 推广状态样式
