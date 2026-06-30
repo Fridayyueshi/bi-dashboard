@@ -3471,6 +3471,7 @@ function renderPlanTable() {
   // 分页导航
   if (totalPages <= 1) {
     pagination.innerHTML = '';
+    requestAnimationFrame(calcPlanStickyOffsets);
     return;
   }
 
