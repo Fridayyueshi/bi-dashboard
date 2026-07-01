@@ -23,6 +23,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, jsonify, request, session, send_from_directory, send_file
 from flask_cors import CORS
+from modules.pricing import pricing_bp
 import requests
 import psycopg2
 import psycopg2.extras
@@ -33,6 +34,7 @@ app = Flask(__name__, static_folder='.', template_folder='.')
 app.secret_key = os.environ.get("SECRET_KEY", "nanchao-bi-secret-2026")
 app.permanent_session_lifetime = timedelta(hours=8)
 CORS(app, supports_credentials=True)
+app.register_blueprint(pricing_bp)
 
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST", "172.17.80.1"),

@@ -275,6 +275,46 @@
       overflow: hidden;
     }
 
+    /* ── 功能卡片网格 ── */
+    .func-card-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .func-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 24px;
+      width: 200px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .func-card:hover {
+      border-color: var(--accent-cyan);
+      background: var(--bg-card-hover);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .func-card-icon {
+      font-size: 36px;
+      line-height: 1;
+    }
+    .func-card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .func-card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
     .card-header {
       padding: 14px 20px;
       border-bottom: 1px solid var(--border);
@@ -1010,6 +1050,80 @@
     }
     .ai-btn:hover { opacity: 0.9; transform: translateY(-1px); }
 
+    /* ── 商品定价 — 品类选择弹窗 ── */
+    .pricing-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9998;
+    }
+    .pricing-modal-overlay.hidden { display: none; }
+    .pricing-modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 480px;
+      max-width: 90vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .pricing-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .pricing-modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .pricing-modal-close:hover {
+      background: var(--bg-dark);
+      color: var(--text-primary);
+    }
+    .pricing-modal-body {
+        padding: 28px 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: center;
+    }
+    .pricing-cat-btn {
+      width: 160px;
+      padding: 30px 0;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .pricing-cat-btn:hover {
+      border-color: var(--accent-cyan);
+      background: var(--bg-card-hover);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
     /* ── 导出弹窗 ── */
     .export-modal-overlay {
       position: fixed;
@@ -1327,6 +1441,34 @@
   </div>
 </div>
 
+<!-- ── 商品定价 — 品类选择弹窗 ── -->
+<div class="pricing-modal-overlay hidden" id="pricingModal">
+  <div class="pricing-modal-box">
+    <div class="pricing-modal-header">
+      <span>💲 选择品类</span>
+      <button class="pricing-modal-close" onclick="closePricingModal()">✕</button>
+    </div>
+    <div class="pricing-modal-body" style="padding:32px 20px;display:flex;flex-wrap:wrap;gap:16px;justify-content:center">
+      <div class="pricing-cat-btn" onclick="openPricingCategory('bed')">
+        <span style="font-size:32px">🛏️</span>
+        <span>床</span>
+      </div>
+      <div class="pricing-cat-btn" onclick="openPricingCategory('sofa')">
+        <span style="font-size:32px">🛋️</span>
+        <span>沙发</span>
+      </div>
+      <div class="pricing-cat-btn" onclick="openPricingCategory('table')">
+        <span style="font-size:32px">🍽️</span>
+        <span>餐桌</span>
+      </div>
+      <div class="pricing-cat-btn" onclick="openPricingCategory('cabinet')">
+        <span style="font-size:32px">🗄️</span>
+        <span>柜子</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="container">
 
   <!-- ── 主布局：侧边栏 + 内容 ── -->
@@ -1547,8 +1689,14 @@
       <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">经营数据模块开发中...</div></div>
     </div>
     <div id="page-shangpinshuju" class="page">
-      <div class="section-title">📦 商品数据</div>
-      <div class="card"><div class="card-body" style="text-align:center;padding:60px;color:var(--text-muted)">商品数据模块开发中...</div></div>
+      <div class="section-title">📦 商品操作功能</div>
+      <div class="func-card-grid">
+        <div class="func-card" onclick="openPricingModal()">
+          <div class="func-card-icon">💲</div>
+          <div class="func-card-title">商品定价</div>
+          <div class="func-card-desc">设置与管理商品定价规则</div>
+        </div>
+      </div>
     </div>
     <div id="page-shangpinliebiao" class="page">
       <div class="section-title">📋 商品列表明细</div>
@@ -2424,6 +2572,21 @@ async function loadProductData() {
 // ── AI 分析（商品数据） ──
 function closeAiModal() {
   document.getElementById('aiModal').classList.add('hidden');
+}
+
+// ── 商品定价 — 品类选择弹窗 ──
+function openPricingModal() {
+  document.getElementById('pricingModal').classList.remove('hidden');
+}
+function closePricingModal() {
+  document.getElementById('pricingModal').classList.add('hidden');
+}
+function openPricingCategory(category) {
+  closePricingModal();
+  if (category === 'bed') {
+    window.open('/modules/pricing/', '_blank');
+  }
+  // 其他品类暂不指定页面
 }
 
 
